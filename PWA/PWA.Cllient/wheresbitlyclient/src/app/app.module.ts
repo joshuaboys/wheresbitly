@@ -10,6 +10,8 @@ import { TwitterComponent } from './twitter/twitter.component';
 import { PrivacyComponent } from './privacy/privacy.component';
 import { WinnerComponent } from './winner/winner.component';
 import { TimerComponent } from './timer/timer.component';
+import { FormsModule } from '@angular/forms';
+import { WebcamModule } from 'ngx-webcam';
 
 @NgModule({
   declarations: [
@@ -23,7 +25,9 @@ import { TimerComponent } from './timer/timer.component';
   imports: [
     BrowserModule,
     AppRoutingModule,
-    ServiceWorkerModule.register('/ngsw-worker.js', { enabled: environment.production })
+    ServiceWorkerModule.register('/ngsw-worker.js', { enabled: environment.production }),
+	FormsModule,
+    WebcamModule
   ],
   providers: [],
   bootstrap: [AppComponent]
