@@ -12,6 +12,7 @@ import { TimerComponent } from './timer/timer.component';
 import { FormsModule } from '@angular/forms';
 import { WebcamModule } from 'ngx-webcam';
 import { SignalRService } from './signalr.service';
+import { FileUploadService } from './file-upload.service';
 import { HttpClientModule } from '@angular/common/http';
 import { MatInputModule, MatButtonModule, MatSnackBarModule } from '@angular/material';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -38,7 +39,10 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
     MatButtonModule,
     MatSnackBarModule
   ],
-  providers: [SignalRService],
+  providers: [
+	SignalRService,
+	FileUploadService
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

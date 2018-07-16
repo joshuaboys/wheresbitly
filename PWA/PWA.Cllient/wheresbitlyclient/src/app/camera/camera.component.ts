@@ -2,12 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import {Subject} from 'rxjs/Subject';
 import {Observable} from 'rxjs/Observable';
 import {WebcamImage, WebcamInitError, WebcamUtil} from 'ngx-webcam';
+import { FileUploadService } from '../file-upload.service';
 
 @Component({
   selector: 'app-camera',
   templateUrl: './camera.component.html',
   styleUrls: ['./camera.component.css']
 })
+
 export class CameraComponent implements OnInit {
   // toggle webcam on/off
   public showWebcam = true;
@@ -25,9 +27,17 @@ export class CameraComponent implements OnInit {
 
   // webcam snapshot trigger
   private trigger: Subject<void> = new Subject<void>();
+  
   // switch to next / previous / specific webcam; true/false: forward/backwards, string: deviceId
   private nextWebcam: Subject<boolean|string> = new Subject<boolean|string>();
+  
+  private readonly _fileUploadService : FileUploadService;
+  
+  constructor(fileUploadService: FileUploadService) { 
+	this._fileUploadService = fileUploadService;
+  }
 
+ 
   public ngOnInit(): void {
     WebcamUtil.getAvailableVideoInputs()
       .then((mediaDevices: MediaDeviceInfo[]) => {
@@ -55,8 +65,21 @@ export class CameraComponent implements OnInit {
   }
 
   public handleImage(webcamImage: WebcamImage): void {
+	  
     console.info('received webcam image', webcamImage);
     this.webcamImage = webcamImage;
+	
+	var imageBlob = this.dataURItoBlob(this.webcamImage.imageAsDataUrl);
+	var imageFile = this.blobToFile(imageBlob, "name.jpeg");
+	
+	this._fileUploadService.postFileToUpload(imageFile).subscribe(data => 
+	{
+      // do something, if upload success
+	  console.log(data);
+    }, error => 
+	{
+        console.log(error);
+    });
   }
 
   public cameraWasSwitched(deviceId: string): void {
@@ -70,5 +93,41 @@ export class CameraComponent implements OnInit {
 
   public get nextWebcamObservable(): Observable<boolean|string> {
     return this.nextWebcam.asObservable();
+  }
+  
+  private dataURItoBlob(dataURI) {
+    // convert base64 to raw binary data held in a string
+    // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+    var byteString = atob(dataURI.split(',')[1]);
+
+    // separate out the mime component
+    var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+
+    // write the bytes of the string to an ArrayBuffer
+    var ab = new ArrayBuffer(byteString.length);
+    var ia = new Uint8Array(ab);
+    for (var i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+
+    //Old Code
+    //write the ArrayBuffer to a blob, and you're done
+    //var bb = new BlobBuilder();
+    //bb.append(ab);
+    //return bb.getBlob(mimeString);
+
+    //New Code
+    return new Blob([ab], {type: mimeString});
+
+  }
+  
+  private blobToFile = (theBlob: Blob, fileName:string): File => {
+    var b: any = theBlob;
+    //A Blob() is almost a File() - it's just missing the two properties below which we will add
+    b.lastModifiedDate = new Date();
+    b.name = fileName;
+    
+    //Cast to a File() type
+    return <File>theBlob;
   }
 }
