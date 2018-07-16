@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "logicAppName": {
+      "value": "registertofindbit"
+    },
+    "faceapi_1_apiKey": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/368ff49e-44d0-4aa5-b788-eb42e73e2f25/resourceGroups/bitly-twitter/providers/Microsoft.KeyVault/vaults/bitwheredev"
+        },
+        "secretName": "facekey"
+      }
+    },
+    "azureblob_1_accessKey": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/368ff49e-44d0-4aa5-b788-eb42e73e2f25/resourceGroups/bitly-twitter/providers/Microsoft.KeyVault/vaults/bitwheredev"
+        },
+        "secretName": "azstorekey"
+      }
+    },
+    "documentdb_1_accessKey": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/368ff49e-44d0-4aa5-b788-eb42e73e2f25/resourceGroups/bitly-twitter/providers/Microsoft.KeyVault/vaults/bitwheredev"
+        },
+        "secretName": "cdbinfo"
+      }
+    }
+  }
+}
