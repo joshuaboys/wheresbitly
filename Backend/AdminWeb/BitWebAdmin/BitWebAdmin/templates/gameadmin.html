@@ -1,0 +1,10 @@
+﻿{% extends "layout.html" %}
+{% block content %}
+<h2>Admin</h2>
+<form action="" method="post" name="gameadmin">
+    {{form.hidden_tag()}}
+    {{form.game_locale}}
+    <input type="text" value="{{admin_form_object.game_locale}}"/>
+    <button class="btn btn-primary" type="submit">Update</button>
+</form>
+{% endblock %}

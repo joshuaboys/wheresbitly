@@ -1,0 +1,20 @@
+﻿{% extends "layout.html" %}
+{% block content %}
+<h2>Training Model</h2>
+{% endblock %}
+{% block scripts %}
+<script language="JavaScript">
+    $(function () {
+        $.ajax({
+            url: '/trainingstatus',
+            type: 'GET',
+            success: function (response) {
+                console.log(response);
+            },
+            error: function (error) {
+                console.log(error);
+            }
+        });
+    });
+</script>
+{% endblock %}
