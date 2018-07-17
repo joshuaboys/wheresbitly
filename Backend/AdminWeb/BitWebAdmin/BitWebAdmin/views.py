@@ -14,9 +14,8 @@ from flask import render_template
 from flask_basicauth import BasicAuth
 from BitWebAdmin import app
 
-
-app.config['BASIC_AUTH_USERNAME'] = 'john'
-app.config['BASIC_AUTH_PASSWORD'] = 'matrix'
+app.config['BASIC_AUTH_USERNAME'] = 'wherebit'
+app.config['BASIC_AUTH_PASSWORD'] = 'simon'
 app.config['BASIC_AUTH_FORCE'] = True
 
 basic_auth = BasicAuth(app)
@@ -76,7 +75,15 @@ def trainingstatus():
 @app.route('/gameadmin', methods=['GET', 'POST'])
 def gameadmin(): 
     form = GameAdminForm()
-  
+
+    # Create a model to pass to results.html
+    class GameAdminObject:
+        game_locale = ""
+        game_round = 0
+        person_group_id = ""
+
+    admin_form_object = GameAdminObject()
+
     client = document_client.DocumentClient(config_cosmos.COSMOSDB_HOST, {'masterKey': config_cosmos.COSMOSDB_KEY})
 
     # Read databases and take first since id should not be duplicated.
@@ -88,23 +95,34 @@ def gameadmin():
     # Read documents and take first since id should not be duplicated.
     doc = next((doc for doc in client.ReadDocuments(coll['_self']) if doc['id'] == config_cosmos.COSMOSDB_DOCUMENT))
 
-    # Take the data from the deploy_preference and increment our database
-    #doc[form.deploy_preference.data] = doc[form.deploy_preference.data] + 1
-    #replaced_document = client.ReplaceDocument(doc['_self'], doc)
+    if form.validate_on_submit(): # is user submitted vote  
+  
+        # Write updated values to database
 
-    # Create a model to pass to results.html
-    class GameAdminObject:
-        game_locale = ""
-        game_round = 0
-
-    admin_form_object = GameAdminObject()
-    admin_form_object.game_locale = doc['activeevent']
-    admin_form_object.game_round = doc['activetier']
-
-    form.game_locale = doc['activeevent']
         
-    return render_template(
-        'gameadmin.html', 
-        year=datetime.now().year,
-		admin_form_object = admin_form_object,
-		form = form)
+        # Take the data from the deploy_preference and increment our database
+        #doc[form.deploy_preference.data] = doc[form.deploy_preference.data] + 1
+        #replaced_document = client.ReplaceDocument(doc['_self'], doc)
+
+
+        return render_template(
+            'about.html', 
+            year=datetime.now().year)
+    
+    else :
+    
+        # load existing values into the form
+
+        form.event_location.data = doc['activeevent']
+        form.person_group.data = doc['persongroupid']
+        form.game_round.data = doc['activetier']
+
+        admin_form_object.game_locale = doc['activeevent']
+        admin_form_object.game_round = doc['activetier']
+        admin_form_object.person_group_id = doc['persongroupid']
+                
+        return render_template(
+            'gameadmin.html', 
+            year=datetime.now().year,
+		    admin_form_object = admin_form_object,
+		    form = form)
