@@ -9,16 +9,18 @@ from flask_wtf import Form
 from wtforms import StringField
 import config_cosmos
 import pydocumentdb.document_client as document_client
+import pydocumentdb.errors as errors
 from datetime import datetime
 from flask import render_template
+from flask import request
 from flask_basicauth import BasicAuth
 from BitWebAdmin import app
 
-app.config['BASIC_AUTH_USERNAME'] = 'wherebit'
-app.config['BASIC_AUTH_PASSWORD'] = 'simon'
-app.config['BASIC_AUTH_FORCE'] = True
+#app.config['BASIC_AUTH_USERNAME'] = 'wherebit'
+#app.config['BASIC_AUTH_PASSWORD'] = 'simon'
+#app.config['BASIC_AUTH_FORCE'] = True
 
-basic_auth = BasicAuth(app)
+#basic_auth = BasicAuth(app)
 
 @app.route('/')
 @app.route('/home')
@@ -72,6 +74,37 @@ def trainingstatus():
 
     return CF.person_group.get_status("swtestgroup01")['status']
 
+@app.route('/confirmrego', methods=['GET'])
+def confirmrego():
+    
+    user = request.args.get('user')
+    response = ""
+
+    if user:
+
+        client = document_client.DocumentClient(config_cosmos.COSMOSDB_HOST, {'masterKey': config_cosmos.COSMOSDB_KEY})
+
+        try:
+        
+            # Try and find the user registration for the user
+            doc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION + '/docs/' + user)
+
+            # mark as confirmed so user can participate in the comp
+            doc['confirmed'] = "true"
+            client.ReplaceDocument(doc['_self'], doc)
+
+            response = "OK"
+
+        except errors.DocumentDBError as e:
+            if e.status_code == 404:
+                response = "could not find user"
+            else:
+                response = "unknown Cosmos error"
+    else:
+        response = "missing argument"
+
+    return response
+
 @app.route('/gameadmin', methods=['GET', 'POST'])
 def gameadmin(): 
     form = GameAdminForm()
@@ -86,27 +119,21 @@ def gameadmin():
 
     client = document_client.DocumentClient(config_cosmos.COSMOSDB_HOST, {'masterKey': config_cosmos.COSMOSDB_KEY})
 
-    # Read databases and take first since id should not be duplicated.
-    db = next((data for data in client.ReadDatabases() if data['id'] == config_cosmos.COSMOSDB_DATABASE))
-
-    # Read collections and take first since id should not be duplicated.
-    coll = next((coll for coll in client.ReadCollections(db['_self']) if coll['id'] == config_cosmos.COSMOSDB_COLLECTION))
-
-    # Read documents and take first since id should not be duplicated.
-    doc = next((doc for doc in client.ReadDocuments(coll['_self']) if doc['id'] == config_cosmos.COSMOSDB_DOCUMENT))
+    doc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.GAME_CONFIG_COSMOSDB_COLLECTION + '/docs/' + config_cosmos.GAME_CONFIG_COSMOSDB_DOCUMENT)
 
     if form.validate_on_submit(): # is user submitted vote  
-  
-        # Write updated values to database
+         
+        doc['activeevent'] = form.event_location.data
+        doc['persongroupid'] = form.person_group.data
+        doc['activetier'] = form.game_round.data
+        replaced_document = client.ReplaceDocument(doc['_self'], doc)
 
-        
-        # Take the data from the deploy_preference and increment our database
-        #doc[form.deploy_preference.data] = doc[form.deploy_preference.data] + 1
-        #replaced_document = client.ReplaceDocument(doc['_self'], doc)
-
+        #admin_form_object.game_locale = replaced_document['activeevent']
+        #admin_form_object.game_round = replaced_document['activetier']
+        #admin_form_object.person_group_id = replaced_document['persongroupid']
 
         return render_template(
-            'about.html', 
+            'saved.html', 
             year=datetime.now().year)
     
     else :
