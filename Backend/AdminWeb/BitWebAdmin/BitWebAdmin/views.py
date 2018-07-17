@@ -71,7 +71,7 @@ def trainingstatus():
     CF.Key.set(face_config.FACE_KEY)
     CF.BaseUrl.set(face_config.FACE_HOST)
 
-    return CF.person_group.get_status("swtestgroup01")
+    return CF.person_group.get_status("swtestgroup01")['status']
 
 @app.route('/gameadmin', methods=['GET', 'POST'])
 def gameadmin(): 
