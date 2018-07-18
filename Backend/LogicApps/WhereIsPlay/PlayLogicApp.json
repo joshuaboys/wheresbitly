@@ -350,9 +350,7 @@
                   "runAfter": {
                     "Try_and_find_user_in_registration_database": [
                       "Succeeded",
-                      "Failed",
-                      "Skipped",
-                      "TimedOut"
+                      "Failed"
                     ]
                   }
                 }

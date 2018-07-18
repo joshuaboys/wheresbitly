@@ -141,38 +141,25 @@
                   }
                 ]
               },
-              "runAfter": {}
+              "runAfter": {
+                "Initialize_variable": [
+                  "Succeeded"
+                ]
+              }
             },
-            "Condition": {
+            "Check_if_tweet_has_at_least_one_media_item": {
               "type": "If",
               "expression": {
                 "and": [
                   {
-                    "greater": [
+                    "greaterOrEquals": [
                       "@length(triggerBody()?['MediaUrls'])",
-                      0
+                      1
                     ]
                   }
                 ]
               },
               "actions": {
-                "Create_a_person": {
-                  "type": "ApiConnection",
-                  "inputs": {
-                    "host": {
-                      "connection": {
-                        "name": "@parameters('$connections')['faceapi']['connectionId']"
-                      }
-                    },
-                    "method": "post",
-                    "body": {
-                      "name": "@triggerBody()?['UserDetails']?['UserName']",
-                      "userData": "@{triggerBody()?['UserDetails']?['Description']}@{variables('RequestIdentifier')}"
-                    },
-                    "path": "/face/v1.0/persongroups/@{encodeURIComponent('swtestgroup01')}/persons"
-                  },
-                  "runAfter": {}
-                },
                 "For_each": {
                   "type": "Foreach",
                   "foreach": "@triggerBody()?['MediaUrls']",
@@ -189,7 +176,7 @@
                         "body": {
                           "url": "@{items('For_each')}"
                         },
-                        "path": "/face/v1.0/persongroups/@{encodeURIComponent('swtestgroup01')}/persons/@{encodeURIComponent(body('Create_a_person')?['personId'])}/persistedFaces",
+                        "path": "/face/v1.0/persongroups/@{encodeURIComponent('swtestgroup01')}/persons/@{encodeURIComponent(variables('UserPersonId'))}/persistedFaces",
                         "queries": {
                           "userData": "@{triggerBody()?['UserDetails']?['UserName']}@{triggerBody()?['UserDetails']?['Description']}@{variables('RequestIdentifier')}"
                         }
@@ -200,46 +187,6 @@
                         ]
                       }
                     },
-                    "HTTP": {
-                      "type": "Http",
-                      "inputs": {
-                        "method": "GET",
-                        "uri": "@{items('For_each')}"
-                      },
-                      "runAfter": {
-                        "Add_a_person_face": [
-                          "Succeeded"
-                        ]
-                      }
-                    },
-                    "Create_blob": {
-                      "type": "ApiConnection",
-                      "inputs": {
-                        "host": {
-                          "connection": {
-                            "name": "@parameters('$connections')['azureblob']['connectionId']"
-                          }
-                        },
-                        "method": "post",
-                        "body": "@body('HTTP')",
-                        "path": "/datasets/default/files",
-                        "queries": {
-                          "folderPath": "/regoattempts",
-                          "name": "@{concat(triggerBody()?['UserDetails']?['UserName'],variables('RequestIdentifier'),variables('UploadedFaceFileName'))}",
-                          "queryParametersSingleEncoded": true
-                        }
-                      },
-                      "runAfter": {
-                        "HTTP": [
-                          "Succeeded"
-                        ]
-                      },
-                      "runtimeConfiguration": {
-                        "contentTransfer": {
-                          "transferMode": "Chunked"
-                        }
-                      }
-                    },
                     "Set_variable": {
                       "type": "SetVariable",
                       "inputs": {
@@ -247,16 +194,230 @@
                         "value": "@{substring(items('For_each'),add(lastIndexOf(items('For_each'), '/'),1),19)}"
                       },
                       "runAfter": {}
+                    },
+                    "Write_image_log_to_DB": {
+                      "type": "ApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connection": {
+                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                          }
+                        },
+                        "method": "post",
+                        "body": "@outputs('Build_image_log_message')",
+                        "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('regourls')}/docs"
+                      },
+                      "runAfter": {
+                        "Build_image_log_message": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Build_image_log_message": {
+                      "type": "Compose",
+                      "inputs": {
+                        "reqid": "@{variables('RequestIdentifier')}",
+                        "userid": "@{triggerBody()?['UserDetails']?['UserName']}",
+                        "id": "@{body('Add_a_person_face')?['persistedFaceId']}",
+                        "imgurl": "@{items('For_each')}"
+                      },
+                      "runAfter": {
+                        "Add_a_person_face": [
+                          "Succeeded"
+                        ]
+                      }
                     }
                   },
                   "runAfter": {
-                    "Save_registered_user_record_to_DB": [
+                    "Did_we_find_a_registration_record_for_the_user": [
                       "Succeeded"
                     ]
                   },
                   "description": "Process each media item provided in the tweet and add it as a face entry for the \"person\" we created previously."
                 },
-                "Save_registered_user_record_to_DB": {
+                "See_if_user_is_already_registered": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['documentdb']['connectionId']"
+                      }
+                    },
+                    "method": "get",
+                    "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('registeredusers')}/docs/@{encodeURIComponent(triggerBody()?['UserDetails']?['UserName'])}"
+                  },
+                  "runAfter": {}
+                },
+                "Did_we_find_a_registration_record_for_the_user": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@actions('See_if_user_is_already_registered')['status']",
+                            "Failed"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Parse_JSON": {
+                      "type": "ParseJson",
+                      "inputs": {
+                        "content": "@body('See_if_user_is_already_registered')",
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "_self": {
+                              "type": "string"
+                            },
+                            "confirmed": {
+                              "type": "boolean"
+                            },
+                            "personid": {
+                              "type": "string"
+                            },
+                            "_rid": {
+                              "type": "string"
+                            },
+                            "_etag": {
+                              "type": "string"
+                            },
+                            "reqid": {
+                              "type": "string"
+                            },
+                            "_attachments": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "_ts": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Set_variable_2": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Set_Person_ID_from_existing_DB_entry": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "UserPersonId",
+                        "value": "@body('Parse_JSON')?['personid']"
+                      },
+                      "runAfter": {
+                        "Parse_JSON": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Set_variable_2": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ExistingUser",
+                        "value": "@true"
+                      },
+                      "runAfter": {}
+                    }
+                  },
+                  "runAfter": {
+                    "See_if_user_is_already_registered": [
+                      "Succeeded"
+                    ]
+                  },
+                  "else": {
+                    "actions": {
+                      "Create_a_person": {
+                        "type": "ApiConnection",
+                        "inputs": {
+                          "host": {
+                            "connection": {
+                              "name": "@parameters('$connections')['faceapi']['connectionId']"
+                            }
+                          },
+                          "method": "post",
+                          "body": {
+                            "name": "@triggerBody()?['UserDetails']?['UserName']",
+                            "userData": "@{triggerBody()?['UserDetails']?['Description']}@{variables('RequestIdentifier')}"
+                          },
+                          "path": "/face/v1.0/persongroups/@{encodeURIComponent('swtestgroup01')}/persons"
+                        },
+                        "runAfter": {}
+                      },
+                      "Create_registered_user_record": {
+                        "type": "Compose",
+                        "inputs": {
+                          "personid": "@{body('Create_a_person')?['personId']}",
+                          "id": "@{triggerBody()?['UserDetails']?['UserName']}",
+                          "confirmed": "@false",
+                          "reqid": "@{variables('RequestIdentifier')}"
+                        },
+                        "runAfter": {
+                          "Set_Person_ID_from_Face_API": [
+                            "Succeeded"
+                          ]
+                        }
+                      },
+                      "Save_new_user_record_to_DB": {
+                        "type": "ApiConnection",
+                        "inputs": {
+                          "host": {
+                            "connection": {
+                              "name": "@parameters('$connections')['documentdb']['connectionId']"
+                            }
+                          },
+                          "method": "post",
+                          "body": "@outputs('Create_registered_user_record')",
+                          "headers": {
+                            "x-ms-documentdb-is-upsert": true
+                          },
+                          "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('registeredusers')}/docs"
+                        },
+                        "runAfter": {
+                          "Create_registered_user_record": [
+                            "Succeeded"
+                          ]
+                        }
+                      },
+                      "Set_Person_ID_from_Face_API": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "UserPersonId",
+                          "value": "@body('Create_a_person')?['personId']"
+                        },
+                        "runAfter": {
+                          "Create_a_person": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "Compose_2": {
+                  "type": "Compose",
+                  "inputs": {
+                    "id": "@{variables('RequestIdentifier')}",
+                    "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
+                    "postbody": "@{triggerBody()?['TweetText']}",
+                    "message": "Success",
+                    "existinguser": "@{variables('ExistingUser')}",
+                    "success": "@{true}"
+                  },
+                  "runAfter": {
+                    "For_each": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Write_rego_attempt_log_to_DB": {
                   "type": "ApiConnection",
                   "inputs": {
                     "host": {
@@ -265,38 +426,54 @@
                       }
                     },
                     "method": "post",
-                    "body": "@outputs('Create_registered_user_record')",
-                    "headers": {
-                      "x-ms-documentdb-is-upsert": true
-                    },
-                    "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('registeredusers')}/docs"
+                    "body": "@outputs('Compose_2')",
+                    "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('regoattempts')}/docs"
                   },
                   "runAfter": {
-                    "Create_registered_user_record": [
-                      "Succeeded"
-                    ]
-                  }
-                },
-                "Create_registered_user_record": {
-                  "type": "Compose",
-                  "inputs": {
-                    "personid": "@{body('Create_a_person')?['personId']}",
-                    "id": "@{triggerBody()?['UserDetails']?['UserName']}",
-                    "confirmed": "@false",
-                    "reqid": "@{variables('RequestIdentifier')}",
-                    "imgcount": "@length(triggerBody()?['MediaUrls'])"
-                  },
-                  "runAfter": {
-                    "Create_a_person": [
+                    "Compose_2": [
                       "Succeeded"
                     ]
                   }
                 }
               },
               "runAfter": {
-                "Initialise_Face_File_name_variable": [
+                "Initialise_Person_ID_variable": [
                   "Succeeded"
                 ]
+              },
+              "else": {
+                "actions": {
+                  "Compose": {
+                    "type": "Compose",
+                    "inputs": {
+                      "id": "@{variables('RequestIdentifier')}",
+                      "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
+                      "postbody": "@{triggerBody()?['TweetText']}",
+                      "message": "No media items in rego tweet",
+                      "existinguser": "",
+                      "success": "@{false}"
+                    },
+                    "runAfter": {}
+                  },
+                  "Write_failed_rego_attempt_log_to_DB": {
+                    "type": "ApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connection": {
+                          "name": "@parameters('$connections')['documentdb']['connectionId']"
+                        }
+                      },
+                      "method": "post",
+                      "body": "@outputs('Compose')",
+                      "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('regoattempts')}/docs"
+                    },
+                    "runAfter": {
+                      "Compose": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
               }
             },
             "Initialise_Face_File_name_variable": {
@@ -314,6 +491,35 @@
                   "Succeeded"
                 ]
               }
+            },
+            "Initialise_Person_ID_variable": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "UserPersonId",
+                    "type": "String"
+                  }
+                ]
+              },
+              "runAfter": {
+                "Initialise_Face_File_name_variable": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Initialize_variable": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "ExistingUser",
+                    "type": "Boolean",
+                    "value": "@false"
+                  }
+                ]
+              },
+              "runAfter": {}
             }
           },
           "parameters": {
@@ -355,11 +561,6 @@
                 "connectionId": "[resourceId('Microsoft.Web/connections', parameters('faceapi_1_Connection_Name'))]",
                 "connectionName": "[parameters('faceapi_1_Connection_Name')]"
               },
-              "azureblob": {
-                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'azureblob')]",
-                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('azureblob_1_Connection_Name'))]",
-                "connectionName": "[parameters('azureblob_1_Connection_Name')]"
-              },
               "documentdb": {
                 "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'documentdb')]",
                 "connectionId": "[resourceId('Microsoft.Web/connections', parameters('documentdb_1_Connection_Name'))]",
@@ -376,7 +577,6 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/connections', parameters('faceapi_1_Connection_Name'))]",
-        "[resourceId('Microsoft.Web/connections', parameters('azureblob_1_Connection_Name'))]",
         "[resourceId('Microsoft.Web/connections', parameters('documentdb_1_Connection_Name'))]",
         "[resourceId('Microsoft.Web/connections', parameters('twitter_1_Connection_Name'))]"
       ]
