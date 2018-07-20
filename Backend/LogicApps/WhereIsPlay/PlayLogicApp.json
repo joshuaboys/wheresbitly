@@ -460,6 +460,24 @@
                                               "Succeeded"
                                             ]
                                           }
+                                        },
+                                        "Write_matched_entry_log_to_DB": {
+                                          "type": "ApiConnection",
+                                          "inputs": {
+                                            "host": {
+                                              "connection": {
+                                                "name": "@parameters('$connections')['documentdb']['connectionId']"
+                                              }
+                                            },
+                                            "method": "post",
+                                            "body": "@outputs('Build_winner_log_message')",
+                                            "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
+                                          },
+                                          "runAfter": {
+                                            "Build_winner_log_message": [
+                                              "Succeeded"
+                                            ]
+                                          }
                                         }
                                       },
                                       "runAfter": {
