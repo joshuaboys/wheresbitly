@@ -218,12 +218,14 @@
                       "inputs": {
                         "reqid": "@{variables('RequestIdentifier')}",
                         "userid": "@{triggerBody()?['UserDetails']?['UserName']}",
-                        "id": "@{body('Add_a_person_face')?['persistedFaceId']}",
+                        "faceid": "@{body('Add_a_person_face')?['persistedFaceId']}",
+                        "id": "@{guid()}",
                         "imgurl": "@{items('For_each')}"
                       },
                       "runAfter": {
                         "Add_a_person_face": [
-                          "Succeeded"
+                          "Succeeded",
+                          "Failed"
                         ]
                       }
                     }
@@ -329,7 +331,8 @@
                   },
                   "runAfter": {
                     "See_if_user_is_already_registered": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed"
                     ]
                   },
                   "else": {
@@ -356,8 +359,9 @@
                         "inputs": {
                           "personid": "@{body('Create_a_person')?['personId']}",
                           "id": "@{triggerBody()?['UserDetails']?['UserName']}",
-                          "confirmed": "@false",
-                          "reqid": "@{variables('RequestIdentifier')}"
+                          "confirmed": "@{false}",
+                          "reqid": "@{variables('RequestIdentifier')}",
+                          "byteround": 0
                         },
                         "runAfter": {
                           "Set_Person_ID_from_Face_API": [

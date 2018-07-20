@@ -114,6 +114,20 @@
         "description": "Root site url (Example: https://westus.api.cognitive.microsoft.com ).If not specified site url will be defaulted to 'https://westus.api.cognitive.microsoft.com'."
       },
       "defaultValue": "https://westus2.api.cognitive.microsoft.com/face/v1.0"
+    },
+    "servicebus_1_Connection_Name": {
+      "type": "string",
+      "defaultValue": "servicebus-1"
+    },
+    "servicebus_1_Connection_DisplayName": {
+      "type": "string",
+      "defaultValue": "bitservicebus"
+    },
+    "servicebus_1_connectionString": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Azure Service Bus Connection String"
+      }
     }
   },
   "variables": {},
@@ -174,175 +188,467 @@
                     ]
                   },
                   "actions": {
-                    "HTTP": {
-                      "type": "Http",
-                      "inputs": {
-                        "method": "GET",
-                        "uri": "@variables('TweetMediaURL')"
-                      },
-                      "runAfter": {
-                        "Set_Face_Filename_variable": [
-                          "Succeeded"
-                        ]
-                      }
-                    },
-                    "Create_blob": {
-                      "type": "ApiConnection",
-                      "inputs": {
-                        "host": {
-                          "connection": {
-                            "name": "@parameters('$connections')['azureblob']['connectionId']"
+                    "Check_that_the_user_is_allowed_to_play_the_game": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "equals": [
+                              "@body('Parse_JSON_3')?['confirmed']",
+                              "@true"
+                            ]
                           }
-                        },
-                        "method": "post",
-                        "body": "@body('HTTP')",
-                        "path": "/datasets/default/files",
-                        "queries": {
-                          "folderPath": "/entries",
-                          "name": "@{concat(triggerBody()?['UserDetails']?['UserName'],variables('RequestIdentifier'),variables('UploadedFaceFileName'))}",
-                          "queryParametersSingleEncoded": true
-                        }
-                      },
-                      "runAfter": {
-                        "HTTP": [
-                          "Succeeded"
                         ]
                       },
-                      "runtimeConfiguration": {
-                        "contentTransfer": {
-                          "transferMode": "Chunked"
-                        }
-                      }
-                    },
-                    "Set_Face_Filename_variable": {
-                      "type": "SetVariable",
-                      "inputs": {
-                        "name": "UploadedFaceFileName",
-                        "value": "@{substring(variables('TweetMediaURL'),add(lastIndexOf(variables('TweetMediaURL'), '/'),1),19)}"
-                      },
-                      "runAfter": {
-                        "Set_Media_URL_variable": [
-                          "Succeeded"
-                        ]
-                      }
-                    },
-                    "Set_Media_URL_variable": {
-                      "type": "SetVariable",
-                      "inputs": {
-                        "name": "TweetMediaURL",
-                        "value": "@{first(triggerBody()?['MediaUrls'])}"
-                      },
-                      "runAfter": {
-                        "Load_current_Bit_user's_Person_ID": [
-                          "Succeeded"
-                        ]
-                      }
-                    },
-                    "Update_play_attempt_log_in_Cosmos": {
-                      "type": "ApiConnection",
-                      "inputs": {
-                        "host": {
-                          "connection": {
-                            "name": "@parameters('$connections')['documentdb']['connectionId']"
-                          }
-                        },
-                        "method": "post",
-                        "body": "@outputs('Build_log_message_with_blob_URL')",
-                        "headers": {
-                          "x-ms-documentdb-is-upsert": true
-                        },
-                        "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
-                      },
-                      "runAfter": {
-                        "Build_log_message_with_blob_URL": [
-                          "Succeeded"
-                        ]
-                      }
-                    },
-                    "Build_log_message_with_blob_URL": {
-                      "type": "Compose",
-                      "inputs": {
-                        "id": "@{variables('RequestIdentifier')}",
-                        "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
-                        "postbody": "@{triggerBody()?['TweetText']}",
-                        "blobname": "@{body('Create_blob')?['Name']}"
-                      },
-                      "runAfter": {
-                        "Create_blob": [
-                          "Succeeded"
-                        ]
-                      }
-                    },
-                    "Detect_faces": {
-                      "type": "ApiConnection",
-                      "inputs": {
-                        "host": {
-                          "connection": {
-                            "name": "@parameters('$connections')['faceapi']['connectionId']"
-                          }
-                        },
-                        "method": "post",
-                        "body": {
-                          "url": "@variables('TweetMediaURL')"
-                        },
-                        "path": "/face/v1.0/detect",
-                        "queries": {
-                          "returnFaceId": "true",
-                          "returnFaceAttributes": "age,gender,headPose,smile,facialHair,glasses",
-                          "returnFaceLandmarks": "true"
-                        }
-                      },
-                      "runAfter": {
-                        "Create_blob": [
-                          "Succeeded"
-                        ]
-                      }
-                    },
-                    "For_each": {
-                      "type": "Foreach",
-                      "foreach": "@body('Detect_faces')",
                       "actions": {
-                        "Find_person_from_face": {
+                        "Set_Media_URL_variable": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "TweetMediaURL",
+                            "value": "@{first(triggerBody()?['MediaUrls'])}"
+                          },
+                          "runAfter": {}
+                        },
+                        "Load_game_configuration": {
                           "type": "ApiConnection",
                           "inputs": {
                             "host": {
                               "connection": {
-                                "name": "@parameters('$connections')['faceapi']['connectionId']"
+                                "name": "@parameters('$connections')['documentdb']['connectionId']"
                               }
                             },
-                            "method": "post",
-                            "body": {
-                              "faceId": "@items('For_each')?['faceId']",
-                              "personGroupId": "swtestgroup01",
-                              "personId": "null"
+                            "method": "get",
+                            "headers": {
+                              "x-ms-max-item-count": 1
                             },
-                            "path": "/face/v1.0/verify"
+                            "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('compconfig')}/docs/@{encodeURIComponent('bitactive')}"
                           },
-                          "runAfter": {}
+                          "runAfter": {
+                            "Set_Media_URL_variable": [
+                              "Succeeded"
+                            ]
+                          }
+                        },
+                        "Parse_JSON": {
+                          "type": "ParseJson",
+                          "inputs": {
+                            "content": "@body('Load_game_configuration')",
+                            "schema": {
+                              "type": "object",
+                              "properties": {
+                                "_self": {
+                                  "type": "string"
+                                },
+                                "_rid": {
+                                  "type": "string"
+                                },
+                                "_attachments": {
+                                  "type": "string"
+                                },
+                                "persongroupid": {
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "activeevent": {
+                                  "type": "string"
+                                },
+                                "activetier": {
+                                  "type": "integer"
+                                },
+                                "_etag": {
+                                  "type": "string"
+                                },
+                                "_ts": {
+                                  "type": "integer"
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Load_game_configuration": [
+                              "Succeeded"
+                            ]
+                          }
+                        },
+                        "Check_if_entry_is_for_the_current_active_level_of_the_game": {
+                          "type": "If",
+                          "expression": {
+                            "and": [
+                              {
+                                "contains": [
+                                  "@triggerBody()?['TweetText']",
+                                  "@concat('#Byte', string(body('Parse_JSON')?['activetier']))"
+                                ]
+                              }
+                            ]
+                          },
+                          "actions": {
+                            "Load_person_'name'_for_the_user_selected_as_Bit": {
+                              "type": "ApiConnection",
+                              "inputs": {
+                                "host": {
+                                  "connection": {
+                                    "name": "@parameters('$connections')['documentdb']['connectionId']"
+                                  }
+                                },
+                                "method": "post",
+                                "body": {
+                                  "query": "select c.id from c where c.byteround = @{body('Parse_JSON')?['activetier']}"
+                                },
+                                "headers": {
+                                  "x-ms-max-item-count": 1
+                                },
+                                "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('registeredusers')}/query"
+                              },
+                              "runAfter": {}
+                            },
+                            "For_each_2": {
+                              "type": "Foreach",
+                              "foreach": "@body('Load_person_''name''_for_the_user_selected_as_Bit')?['Documents']",
+                              "actions": {
+                                "Parse_JSON_2": {
+                                  "type": "ParseJson",
+                                  "inputs": {
+                                    "content": "@items('For_each_2')",
+                                    "schema": {
+                                      "type": "object",
+                                      "properties": {
+                                        "personid": {
+                                          "type": "string"
+                                        },
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "confirmed": {
+                                          "type": "boolean"
+                                        },
+                                        "byteround": {
+                                          "type": "integer"
+                                        },
+                                        "reqid": {
+                                          "type": "string"
+                                        },
+                                        "_rid": {
+                                          "type": "string"
+                                        },
+                                        "_self": {
+                                          "type": "string"
+                                        },
+                                        "_etag": {
+                                          "type": "string"
+                                        },
+                                        "_attachments": {
+                                          "type": "string"
+                                        },
+                                        "_ts": {
+                                          "type": "integer"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "runAfter": {}
+                                },
+                                "Detect_faces": {
+                                  "type": "ApiConnection",
+                                  "inputs": {
+                                    "host": {
+                                      "connection": {
+                                        "name": "@parameters('$connections')['faceapi']['connectionId']"
+                                      }
+                                    },
+                                    "method": "post",
+                                    "body": {
+                                      "url": "@variables('TweetMediaURL')"
+                                    },
+                                    "path": "/face/v1.0/detect",
+                                    "queries": {
+                                      "returnFaceId": "true",
+                                      "returnFaceAttributes": "age,gender,headPose,smile,facialHair,glasses",
+                                      "returnFaceLandmarks": "true"
+                                    }
+                                  },
+                                  "runAfter": {
+                                    "Set_variable": [
+                                      "Succeeded"
+                                    ]
+                                  }
+                                },
+                                "For_each": {
+                                  "type": "Foreach",
+                                  "foreach": "@body('Detect_faces')",
+                                  "actions": {
+                                    "Attempt_to_see_if_Bit's_Face_is_the_returned_Face_ID": {
+                                      "type": "ApiConnection",
+                                      "inputs": {
+                                        "host": {
+                                          "connection": {
+                                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                                          }
+                                        },
+                                        "method": "post",
+                                        "body": {
+                                          "query": "select c.imgurl where c.userid = \"@{variables('BitUserId')}\" and c.faceid = \"@{items('For_each')['faceId']}\""
+                                        },
+                                        "headers": {
+                                          "x-ms-max-item-count": 1
+                                        },
+                                        "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('regourls')}/query"
+                                      },
+                                      "runAfter": {}
+                                    },
+                                    "Did_we_get_a_record_back_from_Cosmos": {
+                                      "type": "If",
+                                      "expression": {
+                                        "and": [
+                                          {
+                                            "not": {
+                                              "equals": [
+                                                "@actions('Attempt_to_see_if_Bit''s_Face_is_the_returned_Face_ID')['status']",
+                                                "Failed"
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      "actions": {
+                                        "Build_message_body_to_send_via_Service_Bus_Queue": {
+                                          "type": "Compose",
+                                          "inputs": {
+                                            "reqid": "@{variables('RequestIdentifier')}",
+                                            "finder": "@{triggerBody()?['UserDetails']?['UserName']}",
+                                            "bit": "@{variables('BitUserId')}",
+                                            "gamelevel": "@{body('Parse_JSON')?['activetier']}"
+                                          },
+                                          "runAfter": {}
+                                        },
+                                        "Send_winning_match_message": {
+                                          "type": "ApiConnection",
+                                          "inputs": {
+                                            "host": {
+                                              "connection": {
+                                                "name": "@parameters('$connections')['servicebus_1']['connectionId']"
+                                              }
+                                            },
+                                            "method": "post",
+                                            "body": {
+                                              "ContentData": "@{base64(outputs('Build_message_body_to_send_via_Service_Bus_Queue'))}",
+                                              "ContentType": "application/json"
+                                            },
+                                            "path": "/@{encodeURIComponent(encodeURIComponent('compwinners'))}/messages",
+                                            "queries": {
+                                              "systemProperties": "None"
+                                            }
+                                          },
+                                          "runAfter": {
+                                            "Build_message_body_to_send_via_Service_Bus_Queue": [
+                                              "Succeeded"
+                                            ]
+                                          }
+                                        },
+                                        "Build_winner_log_message": {
+                                          "type": "Compose",
+                                          "inputs": {
+                                            "id": "@{guid()}",
+                                            "reqid": "@{variables('RequestIdentifier')}",
+                                            "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
+                                            "postbody": "@{triggerBody()?['TweetText']}",
+                                            "bit": "@{variables('BitUserId')}",
+                                            "gamelevel": "@{body('Parse_JSON')?['activetier']}",
+                                            "status": "matched_bitly"
+                                          },
+                                          "runAfter": {
+                                            "Send_winning_match_message": [
+                                              "Succeeded"
+                                            ]
+                                          }
+                                        }
+                                      },
+                                      "runAfter": {
+                                        "Attempt_to_see_if_Bit's_Face_is_the_returned_Face_ID": [
+                                          "Succeeded",
+                                          "Failed"
+                                        ]
+                                      },
+                                      "else": {
+                                        "actions": {
+                                          "Build_log_message_for_no_match": {
+                                            "type": "Compose",
+                                            "inputs": {
+                                              "id": "@{guid()}",
+                                              "reqid": "@{variables('RequestIdentifier')}",
+                                              "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
+                                              "postbody": "@{triggerBody()?['TweetText']}",
+                                              "status": "no_face_match"
+                                            },
+                                            "runAfter": {}
+                                          },
+                                          "Create_or_update_document_2": {
+                                            "type": "ApiConnection",
+                                            "inputs": {
+                                              "host": {
+                                                "connection": {
+                                                  "name": "@parameters('$connections')['documentdb']['connectionId']"
+                                                }
+                                              },
+                                              "method": "post",
+                                              "body": "@outputs('Build_log_message_for_no_match')",
+                                              "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
+                                            },
+                                            "runAfter": {
+                                              "Build_log_message_for_no_match": [
+                                                "Succeeded"
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "runAfter": {
+                                    "Detect_faces": [
+                                      "Succeeded"
+                                    ]
+                                  }
+                                },
+                                "Set_variable": {
+                                  "type": "SetVariable",
+                                  "inputs": {
+                                    "name": "BitUserId",
+                                    "value": "@body('Parse_JSON_2')?['id']"
+                                  },
+                                  "runAfter": {
+                                    "Parse_JSON_2": [
+                                      "Succeeded"
+                                    ]
+                                  }
+                                }
+                              },
+                              "runAfter": {
+                                "Load_person_'name'_for_the_user_selected_as_Bit": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "description": "Will only run once as we have limited match responses to 1 in previous action."
+                            }
+                          },
+                          "runAfter": {
+                            "Parse_JSON": [
+                              "Succeeded"
+                            ]
+                          },
+                          "else": {
+                            "actions": {
+                              "Create_log_message_for_incorrect_game_level_entry": {
+                                "type": "Compose",
+                                "inputs": {
+                                  "id": "@{guid()}",
+                                  "reqid": "@{variables('RequestIdentifier')}",
+                                  "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
+                                  "status": "incorrect_game_level"
+                                },
+                                "runAfter": {}
+                              },
+                              "Create_or_update_document": {
+                                "type": "ApiConnection",
+                                "inputs": {
+                                  "host": {
+                                    "connection": {
+                                      "name": "@parameters('$connections')['documentdb']['connectionId']"
+                                    }
+                                  },
+                                  "method": "post",
+                                  "body": "@outputs('Create_log_message_for_incorrect_game_level_entry')",
+                                  "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
+                                },
+                                "runAfter": {
+                                  "Create_log_message_for_incorrect_game_level_entry": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            }
+                          }
                         }
                       },
                       "runAfter": {
-                        "Detect_faces": [
+                        "Parse_JSON_3": [
                           "Succeeded"
                         ]
+                      },
+                      "else": {
+                        "actions": {
+                          "Create_log_message_for_unconfirmed_user": {
+                            "type": "Compose",
+                            "inputs": {
+                              "id": "@{guid()}",
+                              "reqid": "@{variables('RequestIdentifier')}",
+                              "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
+                              "status": "user_not_confirmed"
+                            },
+                            "runAfter": {}
+                          },
+                          "Write_log_message_for_unconfirmed_user_to_DB": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                              "host": {
+                                "connection": {
+                                  "name": "@parameters('$connections')['documentdb']['connectionId']"
+                                }
+                              },
+                              "method": "post",
+                              "body": "@outputs('Create_log_message_for_unconfirmed_user')",
+                              "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
+                            },
+                            "runAfter": {
+                              "Create_log_message_for_unconfirmed_user": [
+                                "Succeeded"
+                              ]
+                            }
+                          }
+                        }
                       }
                     },
-                    "Load_current_Bit_user's_Person_ID": {
-                      "type": "ApiConnection",
+                    "Parse_JSON_3": {
+                      "type": "ParseJson",
                       "inputs": {
-                        "host": {
-                          "connection": {
-                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                        "content": "@body('Try_and_find_user_in_registration_database')",
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "personid": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "confirmed": {
+                              "type": "boolean"
+                            },
+                            "byteround": {
+                              "type": "integer"
+                            },
+                            "reqid": {
+                              "type": "string"
+                            },
+                            "_rid": {
+                              "type": "string"
+                            },
+                            "_self": {
+                              "type": "string"
+                            },
+                            "_etag": {
+                              "type": "string"
+                            },
+                            "_attachments": {
+                              "type": "string"
+                            },
+                            "_ts": {
+                              "type": "integer"
+                            }
                           }
-                        },
-                        "method": "post",
-                        "body": {
-                          "query": "where user has 'isbit' flag set to true"
-                        },
-                        "headers": {
-                          "x-ms-max-item-count": 1
-                        },
-                        "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('registeredusers')}/query"
+                        }
                       },
                       "runAfter": {}
                     }
@@ -352,6 +658,38 @@
                       "Succeeded",
                       "Failed"
                     ]
+                  },
+                  "else": {
+                    "actions": {
+                      "Create_log_message_for_unregistered_user": {
+                        "type": "Compose",
+                        "inputs": {
+                          "id": "@{guid()}",
+                          "reqid": "@{variables('RequestIdentifier')}",
+                          "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
+                          "status": "user_not_registered"
+                        },
+                        "runAfter": {}
+                      },
+                      "Write_log_message_for_unregistered_user_to_DB": {
+                        "type": "ApiConnection",
+                        "inputs": {
+                          "host": {
+                            "connection": {
+                              "name": "@parameters('$connections')['documentdb']['connectionId']"
+                            }
+                          },
+                          "method": "post",
+                          "body": "@outputs('Create_log_message_for_unregistered_user')",
+                          "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
+                        },
+                        "runAfter": {
+                          "Create_log_message_for_unregistered_user": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    }
                   }
                 }
               },
@@ -362,21 +700,33 @@
               },
               "else": {
                 "actions": {
-                  "Post_a_tweet_3": {
+                  "Create_log_message_for_no_media_error": {
+                    "type": "Compose",
+                    "inputs": {
+                      "id": "@{guid()}",
+                      "reqid": "@{variables('RequestIdentifier')}",
+                      "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
+                      "status": "no_tweet_media"
+                    },
+                    "runAfter": {}
+                  },
+                  "Write_log_message_to_DB": {
                     "type": "ApiConnection",
                     "inputs": {
                       "host": {
                         "connection": {
-                          "name": "@parameters('$connections')['twitter_1']['connectionId']"
+                          "name": "@parameters('$connections')['documentdb']['connectionId']"
                         }
                       },
                       "method": "post",
-                      "path": "/posttweet",
-                      "queries": {
-                        "tweetText": "No Image@{utcNow()}"
-                      }
+                      "body": "@outputs('Create_log_message_for_no_media_error')",
+                      "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
                     },
-                    "runAfter": {}
+                    "runAfter": {
+                      "Create_log_message_for_no_media_error": [
+                        "Succeeded"
+                      ]
+                    }
                   }
                 }
               }
@@ -384,9 +734,11 @@
             "Create_document_for_logging": {
               "type": "Compose",
               "inputs": {
-                "id": "@{variables('RequestIdentifier')}",
+                "id": "@{guid()}",
+                "reqid": "@{variables('RequestIdentifier')}",
                 "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
-                "postbody": "@{triggerBody()?['TweetText']}"
+                "postbody": "@{triggerBody()?['TweetText']}",
+                "status": "initial_request"
               },
               "runAfter": {
                 "Initialise_Tweet_media_URL_variable": [
@@ -423,7 +775,11 @@
                   }
                 ]
               },
-              "runAfter": {}
+              "runAfter": {
+                "Initialise_Bit_User_ID_variable": [
+                  "Succeeded"
+                ]
+              }
             },
             "Initialise_Face_Filename_variable": {
               "type": "InitializeVariable",
@@ -456,6 +812,18 @@
                   "Succeeded"
                 ]
               }
+            },
+            "Initialise_Bit_User_ID_variable": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "BitUserId",
+                    "type": "String"
+                  }
+                ]
+              },
+              "runAfter": {}
             }
           },
           "parameters": {
@@ -497,15 +865,15 @@
                 "connectionId": "[resourceId('Microsoft.Web/connections', parameters('documentdb_1_Connection_Name'))]",
                 "connectionName": "[parameters('documentdb_1_Connection_Name')]"
               },
-              "azureblob": {
-                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'azureblob')]",
-                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('azureblob_1_Connection_Name'))]",
-                "connectionName": "[parameters('azureblob_1_Connection_Name')]"
-              },
               "faceapi": {
                 "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'faceapi')]",
                 "connectionId": "[resourceId('Microsoft.Web/connections', parameters('faceapi_1_Connection_Name'))]",
                 "connectionName": "[parameters('faceapi_1_Connection_Name')]"
+              },
+              "servicebus_1": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'servicebus')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('servicebus_1_Connection_Name'))]",
+                "connectionName": "[parameters('servicebus_1_Connection_Name')]"
               },
               "twitter_1": {
                 "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'twitter')]",
@@ -518,8 +886,8 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/connections', parameters('documentdb_1_Connection_Name'))]",
-        "[resourceId('Microsoft.Web/connections', parameters('azureblob_1_Connection_Name'))]",
         "[resourceId('Microsoft.Web/connections', parameters('faceapi_1_Connection_Name'))]",
+        "[resourceId('Microsoft.Web/connections', parameters('servicebus_1_Connection_Name'))]",
         "[resourceId('Microsoft.Web/connections', parameters('twitter_1_Connection_Name'))]"
       ]
     },
@@ -580,6 +948,21 @@
         "parameterValues": {
           "apiKey": "[parameters('faceapi_1_apiKey')]",
           "siteUrl": "[parameters('faceapi_1_siteUrl')]"
+        }
+      }
+    },
+    {
+      "type": "MICROSOFT.WEB/CONNECTIONS",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('servicebus_1_Connection_Name')]",
+      "location": "[parameters('logicAppLocation')]",
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'servicebus')]"
+        },
+        "displayName": "[parameters('servicebus_1_Connection_DisplayName')]",
+        "parameterValues": {
+          "connectionString": "[parameters('servicebus_1_connectionString')]"
         }
       }
     }
