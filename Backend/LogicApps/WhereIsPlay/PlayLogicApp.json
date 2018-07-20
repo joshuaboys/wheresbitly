@@ -295,7 +295,7 @@
                                 },
                                 "method": "post",
                                 "body": {
-                                  "query": "select c.id from c where c.byteround = @{body('Parse_JSON')?['activetier']}"
+                                  "query": "select * from c where c.byteround = @{body('Parse_JSON')?['activetier']}"
                                 },
                                 "headers": {
                                   "x-ms-max-item-count": 1
@@ -379,36 +379,33 @@
                                   "type": "Foreach",
                                   "foreach": "@body('Detect_faces')",
                                   "actions": {
-                                    "Attempt_to_see_if_Bit's_Face_is_the_returned_Face_ID": {
+                                    "Find_person_from_face": {
                                       "type": "ApiConnection",
                                       "inputs": {
                                         "host": {
                                           "connection": {
-                                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                                            "name": "@parameters('$connections')['faceapi']['connectionId']"
                                           }
                                         },
                                         "method": "post",
                                         "body": {
-                                          "query": "select c.imgurl from c where c.userid = \"@{variables('BitUserId')}\" and c.faceid = \"@{items('For_each')['faceId']}\""
+                                          "faceId": "@items('For_each')?['faceId']",
+                                          "personGroupId": "@body('Parse_JSON')?['persongroupid']",
+                                          "personId": "@body('Parse_JSON_2')?['personid']"
                                         },
-                                        "headers": {
-                                          "x-ms-max-item-count": 1
-                                        },
-                                        "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('regourls')}/query"
+                                        "path": "/face/v1.0/verify"
                                       },
                                       "runAfter": {}
                                     },
-                                    "Did_we_get_a_record_back_from_Cosmos": {
+                                    "Condition": {
                                       "type": "If",
                                       "expression": {
                                         "and": [
                                           {
-                                            "not": {
-                                              "equals": [
-                                                "@actions('Attempt_to_see_if_Bit''s_Face_is_the_returned_Face_ID')['status']",
-                                                "Failed"
-                                              ]
-                                            }
+                                            "equals": [
+                                              "@body('Find_person_from_face')?['isIdentical']",
+                                              "@true"
+                                            ]
                                           }
                                         ]
                                       },
@@ -466,9 +463,8 @@
                                         }
                                       },
                                       "runAfter": {
-                                        "Attempt_to_see_if_Bit's_Face_is_the_returned_Face_ID": [
-                                          "Succeeded",
-                                          "Failed"
+                                        "Find_person_from_face": [
+                                          "Succeeded"
                                         ]
                                       },
                                       "else": {
@@ -480,11 +476,12 @@
                                               "reqid": "@{variables('RequestIdentifier')}",
                                               "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
                                               "postbody": "@{triggerBody()?['TweetText']}",
-                                              "status": "no_face_match"
+                                              "status": "no_face_match",
+                                              "confidencelevel": "@body('Find_person_from_face')?['confidence']"
                                             },
                                             "runAfter": {}
                                           },
-                                          "Create_or_update_document_2": {
+                                          "Write_no_match_log_message_to_DB": {
                                             "type": "ApiConnection",
                                             "inputs": {
                                               "host": {
@@ -503,14 +500,16 @@
                                             }
                                           }
                                         }
-                                      }
+                                      },
+                                      "description": "Is Identitical set to 'true' if confidence level is greater than 50%"
                                     }
                                   },
                                   "runAfter": {
                                     "Detect_faces": [
                                       "Succeeded"
                                     ]
-                                  }
+                                  },
+                                  "description": "There may be multiple faces in the provided image so we need to process each of them."
                                 },
                                 "Set_variable": {
                                   "type": "SetVariable",
