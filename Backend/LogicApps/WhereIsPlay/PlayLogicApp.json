@@ -389,7 +389,7 @@
                                         },
                                         "method": "post",
                                         "body": {
-                                          "query": "select c.imgurl where c.userid = \"@{variables('BitUserId')}\" and c.faceid = \"@{items('For_each')['faceId']}\""
+                                          "query": "select c.imgurl from c where c.userid = \"@{variables('BitUserId')}\" and c.faceid = \"@{items('For_each')['faceId']}\""
                                         },
                                         "headers": {
                                           "x-ms-max-item-count": 1

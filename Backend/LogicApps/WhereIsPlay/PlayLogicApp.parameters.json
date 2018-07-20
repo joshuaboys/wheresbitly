@@ -28,6 +28,17 @@
         },
         "secretName": "facekey"
       }
+    },
+    "servicebus_1_connectionString": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/368ff49e-44d0-4aa5-b788-eb42e73e2f25/resourceGroups/bitly-twitter/providers/Microsoft.KeyVault/vaults/bitwheredev"
+        },
+        "secretName": "bitservicebus"
+      }
+    },
+    "servicebus_1_Connection_Name": {
+      "value": "servicebus"
     }
   }
 }

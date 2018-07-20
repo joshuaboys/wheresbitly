@@ -142,7 +142,7 @@
                 ]
               },
               "runAfter": {
-                "Initialize_variable": [
+                "Initialise_Existing_User_variable": [
                   "Succeeded"
                 ]
               }
@@ -176,7 +176,7 @@
                         "body": {
                           "url": "@{items('For_each')}"
                         },
-                        "path": "/face/v1.0/persongroups/@{encodeURIComponent('swtestgroup01')}/persons/@{encodeURIComponent(variables('UserPersonId'))}/persistedFaces",
+                        "path": "/face/v1.0/persongroups/@{encodeURIComponent(body('Parse_game_configuration')?['persongroupid'])}/persons/@{encodeURIComponent(variables('UserPersonId'))}/persistedFaces",
                         "queries": {
                           "userData": "@{triggerBody()?['UserDetails']?['UserName']}@{triggerBody()?['UserDetails']?['Description']}@{variables('RequestIdentifier')}"
                         }
@@ -248,7 +248,11 @@
                     "method": "get",
                     "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('registeredusers')}/docs/@{encodeURIComponent(triggerBody()?['UserDetails']?['UserName'])}"
                   },
-                  "runAfter": {}
+                  "runAfter": {
+                    "Parse_game_configuration": [
+                      "Succeeded"
+                    ]
+                  }
                 },
                 "Did_we_find_a_registration_record_for_the_user": {
                   "type": "If",
@@ -272,28 +276,31 @@
                         "schema": {
                           "type": "object",
                           "properties": {
-                            "_self": {
+                            "personid": {
+                              "type": "string"
+                            },
+                            "id": {
                               "type": "string"
                             },
                             "confirmed": {
                               "type": "boolean"
                             },
-                            "personid": {
+                            "reqid": {
                               "type": "string"
                             },
+                            "byteround": {
+                              "type": "integer"
+                            },
                             "_rid": {
+                              "type": "string"
+                            },
+                            "_self": {
                               "type": "string"
                             },
                             "_etag": {
                               "type": "string"
                             },
-                            "reqid": {
-                              "type": "string"
-                            },
                             "_attachments": {
-                              "type": "string"
-                            },
-                            "id": {
                               "type": "string"
                             },
                             "_ts": {
@@ -350,16 +357,16 @@
                             "name": "@triggerBody()?['UserDetails']?['UserName']",
                             "userData": "@{triggerBody()?['UserDetails']?['Description']}@{variables('RequestIdentifier')}"
                           },
-                          "path": "/face/v1.0/persongroups/@{encodeURIComponent('swtestgroup01')}/persons"
+                          "path": "/face/v1.0/persongroups/@{encodeURIComponent(body('Parse_game_configuration')?['persongroupid'])}/persons"
                         },
                         "runAfter": {}
                       },
                       "Create_registered_user_record": {
                         "type": "Compose",
                         "inputs": {
-                          "personid": "@{body('Create_a_person')?['personId']}",
+                          "personid": "@{variables('UserPersonId')}",
                           "id": "@{triggerBody()?['UserDetails']?['UserName']}",
-                          "confirmed": "@{false}",
+                          "confirmed": "@false",
                           "reqid": "@{variables('RequestIdentifier')}",
                           "byteround": 0
                         },
@@ -438,6 +445,62 @@
                       "Succeeded"
                     ]
                   }
+                },
+                "Load_active_game_configuration": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['documentdb']['connectionId']"
+                      }
+                    },
+                    "method": "get",
+                    "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('compconfig')}/docs/@{encodeURIComponent('bitactive')}"
+                  },
+                  "runAfter": {}
+                },
+                "Parse_game_configuration": {
+                  "type": "ParseJson",
+                  "inputs": {
+                    "content": "@body('Load_active_game_configuration')",
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "_self": {
+                          "type": "string"
+                        },
+                        "_rid": {
+                          "type": "string"
+                        },
+                        "_attachments": {
+                          "type": "string"
+                        },
+                        "persongroupid": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "activeevent": {
+                          "type": "string"
+                        },
+                        "activetier": {
+                          "type": "integer"
+                        },
+                        "_etag": {
+                          "type": "string"
+                        },
+                        "_ts": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Load_active_game_configuration": [
+                      "Succeeded"
+                    ]
+                  }
                 }
               },
               "runAfter": {
@@ -512,7 +575,7 @@
                 ]
               }
             },
-            "Initialize_variable": {
+            "Initialise_Existing_User_variable": {
               "type": "InitializeVariable",
               "inputs": {
                 "variables": [
