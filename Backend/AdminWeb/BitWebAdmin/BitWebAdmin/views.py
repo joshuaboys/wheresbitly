@@ -2,6 +2,7 @@
 Routes and views for the flask application.
 """
 
+import random
 import cognitive_face as CF
 import face_config
 from forms import GameAdminForm
@@ -128,13 +129,46 @@ def gameadmin():
         doc['activetier'] = form.game_round.data
         replaced_document = client.ReplaceDocument(doc['_self'], doc)
 
-        #admin_form_object.game_locale = replaced_document['activeevent']
-        #admin_form_object.game_round = replaced_document['activetier']
-        #admin_form_object.person_group_id = replaced_document['persongroupid']
+        try:
+            
+        # Select confirmed users that haven't been Bit before. Support groups of up to 1,000 players because that's the max for a standard Person Group in Face API.
+            query = {
+                    "query": "SELECT TOP 1000 * FROM u WHERE u.confirmed=true AND u.byteround=0",
+                    }
+            
+            results = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION, query))
 
-        return render_template(
-            'saved.html', 
-            year=datetime.now().year)
+            # total available users 
+            item_count = len(results)
+            # select a random integer representing position in list to select
+            user_to_select = random.randint(0,item_count-1)
+            # select new Bit user from list - list consists of document ID
+            new_bit_user = results[user_to_select]
+
+            # Read the full Cosmos document for the user
+            userDoc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION + '/docs/' + new_bit_user)
+
+            # Set the round ID to be the currently selected round.
+            #userDoc['byteround'] = form.game_round.data
+            # Write document back to Cosmos
+            #client.ReplaceDocument(userDoc['_self'], userDoc)
+       
+        except errors.DocumentDBError as e:
+            if e.status_code == 404:
+                print("Document doesn't exist")
+            elif e.status_code == 400:
+                # Can occur when we are trying to query on excluded paths
+                print("Bad Request exception occured: ", e)
+                pass
+            else:
+                raise
+        finally:  
+
+            return render_template(
+                'saved.html', 
+                year=datetime.now().year)
+
+
     
     else :
     

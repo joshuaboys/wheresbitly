@@ -11,3 +11,4 @@ flup
 pydocumentdb>=1.0.0
 Flask-BasicAuth
 cognitive_face
+applicationinsights
