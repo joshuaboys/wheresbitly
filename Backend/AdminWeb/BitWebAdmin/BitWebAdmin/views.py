@@ -5,10 +5,13 @@ Routes and views for the flask application.
 import random
 import cognitive_face as CF
 import face_config
-from forms import GameAdminForm
+from forms import GameAdminForm, ConfirmUserForm, FindUserForm
 from flask_wtf import Form
 from wtforms import StringField
+from wtforms.validators import InputRequired
+from wtforms import BooleanField
 import config_cosmos
+import pydocumentdb
 import pydocumentdb.document_client as document_client
 import pydocumentdb.errors as errors
 from datetime import datetime
@@ -16,6 +19,9 @@ from flask import render_template
 from flask import request
 from flask_basicauth import BasicAuth
 from BitWebAdmin import app
+
+from applicationinsights import TelemetryClient
+tc = TelemetryClient(app.config['APPINSIGHTS_INSTRUMENTATIONKEY'])
 
 #app.config['BASIC_AUTH_USERNAME'] = 'wherebit'
 #app.config['BASIC_AUTH_PASSWORD'] = 'simon'
@@ -33,14 +39,70 @@ def home():
         year=datetime.now().year,
     )
 
-@app.route('/contact')
-def contact():
-    """Renders the contact page."""
+@app.route('/findplayer')
+def findplayer():
+
+    form = FindUserForm()
+
     return render_template(
-        'contact.html',
-        title='Contact',
+        'findplayer.html',
+        title='Find Player',
         year=datetime.now().year,
-        message='Your contact page.'
+        form = form
+    )
+
+@app.route('/confirmplayer', methods=['POST'])
+def confirmplayer():
+    
+    form = ConfirmUserForm()
+    form.user_name = request.form['user_name']
+    img_user = ""
+    user_lookup_status = ""
+
+    client = document_client.DocumentClient(config_cosmos.COSMOSDB_HOST, {'masterKey': config_cosmos.COSMOSDB_KEY})
+
+    try:
+        
+        # Try and find the user registration for the user
+        userDoc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION + '/docs/' + request.form['user_name'])
+
+    except errors.DocumentDBError as e:
+        tc.track_exception()
+        tc.flush()
+        if e.status_code == 404:
+            user_lookup_status = "Could not find user (404)"
+        else:
+            user_lookup_status = "Unknown error finding user (" + e.status_code + ")"
+
+    try:
+
+        # If we found the user go ahead and try and find a valid Face image for them
+        if user_lookup_status == "":
+            options = {} 
+            options['maxItemCount'] = 1
+
+            # Select image for user (may be multiple so we will take only 1). Ensure it's an image with a valid Face ID and not just a random image
+            query = {
+                    "query": "SELECT * FROM u WHERE u.userid=@userId AND u.faceid<>''",
+                    "parameters" : [
+                            { "name": "@userId", "value": request.form['user_name'] }
+                        ]
+                    }
+
+            images = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_IMAGES_COSMOSDB_COLLECTION, query, options))
+            img_user = images[0]['imgurl']
+    
+    except:
+        tc.track_exception()
+        tc.flush()
+
+    return render_template(
+        'confirmplayer.html',
+        title='Confirm Player',
+        year=datetime.now().year,
+        form=form,
+        userstatus=user_lookup_status,
+        imgurl=img_user
     )
 
 @app.route('/about')
@@ -154,6 +216,10 @@ def gameadmin():
             #client.ReplaceDocument(userDoc['_self'], userDoc)
        
         except errors.DocumentDBError as e:
+
+            tc.track_exception()
+            tc.flush()
+
             if e.status_code == 404:
                 print("Document doesn't exist")
             elif e.status_code == 400:
