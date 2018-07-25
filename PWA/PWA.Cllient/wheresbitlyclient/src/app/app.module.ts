@@ -1,22 +1,25 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import { AppRoutingModule } from './app-routing.module';
-import { AppComponent } from './app.component';
+import { Routes, RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
+import { MatInputModule, MatButtonModule, MatSnackBarModule } from '@angular/material';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ServiceWorkerModule } from '@angular/service-worker';
+
+import { AppComponent } from './app.component';
 import { environment } from '../environments/environment';
+
 import { CameraComponent } from './camera/camera.component';
 import { TwitterComponent } from './twitter/twitter.component';
 import { PrivacyComponent } from './privacy/privacy.component';
 import { WinnerComponent } from './winner/winner.component';
 import { TimerComponent } from './timer/timer.component';
-import { FormsModule } from '@angular/forms';
-import { WebcamModule } from 'ngx-webcam';
+import { AudioComponent } from './audio/audio.component';
 import { SignalRService } from './signalr.service';
 import { FileUploadService } from './file-upload.service';
-import { HttpClientModule } from '@angular/common/http';
-import { MatInputModule, MatButtonModule, MatSnackBarModule } from '@angular/material';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-
+import { ControlWizardComponent } from './control-wizard/control-wizard.component';
+import { SharedComponent } from './shared/shared.component';
 
 @NgModule({
   declarations: [
@@ -25,14 +28,20 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
     TwitterComponent,
     PrivacyComponent,
     WinnerComponent,
-    TimerComponent
+    TimerComponent,
+	ControlWizardComponent,
+	AudioComponent,
+    SharedComponent
   ],
   imports: [
     BrowserModule,
-    AppRoutingModule,
+    // AppRoutingModule,
+    RouterModule.forRoot([
+		{ path: '', component: CameraComponent, pathMatch: 'full' },
+            { path: 'images/:id', component: SharedComponent }
+    ]),
     ServiceWorkerModule.register('/ngsw-worker.js', { enabled: environment.production }),
 	FormsModule,
-    WebcamModule,
     HttpClientModule,
     BrowserAnimationsModule,
     MatInputModule,

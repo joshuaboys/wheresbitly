@@ -7,7 +7,7 @@ import { catchError, retry, map, tap, last } from 'rxjs/operators';
 export class FileUploadService {
 
     private readonly _http: HttpClient;
-    private readonly _baseUrl: string = "http://localhost:7071/api/";
+    private readonly _baseUrl: string = "https://wheresbitly-ew.azurewebsites.net/api/";
 
     constructor(http: HttpClient) {
         this._http = http;

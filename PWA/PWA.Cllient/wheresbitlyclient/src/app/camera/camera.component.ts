@@ -1,133 +1,123 @@
-import { Component, OnInit } from '@angular/core';
-import {Subject} from 'rxjs/Subject';
-import {Observable} from 'rxjs/Observable';
-import {WebcamImage, WebcamInitError, WebcamUtil} from 'ngx-webcam';
+import { Component, Inject, ViewChild, OnInit, AfterViewInit, ElementRef } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { WizardState, PhotoDetails } from '../control-wizard/control-wizard.component';
+import { setTimeout } from 'timers';
 import { FileUploadService } from '../file-upload.service';
 
 @Component({
-  selector: 'app-camera',
-  templateUrl: './camera.component.html',
-  styleUrls: ['./camera.component.css']
+    selector: 'camera',
+    templateUrl: './camera.component.html',
+    styleUrls: ['./camera.component.css']
 })
+export class CameraComponent implements AfterViewInit {
+    @ViewChild('video') videoElement: ElementRef;
+    private video: HTMLVideoElement;
 
-export class CameraComponent implements OnInit {
-  // toggle webcam on/off
-  public showWebcam = true;
-  public allowCameraSwitch = true;
-  public multipleWebcamsAvailable = false;
-  public deviceId: string;
-  public videoOptions: MediaTrackConstraints = {
-    // width: {ideal: 1024},
-    // height: {ideal: 576}
-  };
-  public errors: WebcamInitError[] = [];
+    @ViewChild('canvas') canvasElement: ElementRef;
+    private canvas: HTMLCanvasElement;
 
-  // latest snapshot
-  public webcamImage: WebcamImage = null;
+    public isTakingPhoto = false;
+    public imageWidth = 640;
+    public imageHeight = 480;
 
-  // webcam snapshot trigger
-  private trigger: Subject<void> = new Subject<void>();
-  
-  // switch to next / previous / specific webcam; true/false: forward/backwards, string: deviceId
-  private nextWebcam: Subject<boolean|string> = new Subject<boolean|string>();
-  
-  private readonly _fileUploadService : FileUploadService;
-  
-  constructor(fileUploadService: FileUploadService) { 
-	this._fileUploadService = fileUploadService;
-  }
-
- 
-  public ngOnInit(): void {
-    WebcamUtil.getAvailableVideoInputs()
-      .then((mediaDevices: MediaDeviceInfo[]) => {
-        this.multipleWebcamsAvailable = mediaDevices && mediaDevices.length > 1;
-      });
-  }
-
-  public triggerSnapshot(): void {
-    this.trigger.next();
-  }
-
-  public toggleWebcam(): void {
-    this.showWebcam = !this.showWebcam;
-  }
-
-  public handleInitError(error: WebcamInitError): void {
-    this.errors.push(error);
-  }
-
-  public showNextWebcam(directionOrDeviceId: boolean|string): void {
-    // true => move forward through devices
-    // false => move backwards through devices
-    // string => move to device with given deviceId
-    this.nextWebcam.next(directionOrDeviceId);
-  }
-
-  public handleImage(webcamImage: WebcamImage): void {
+	private readonly _fileUploadService : FileUploadService;
 	  
-    console.info('received webcam image', webcamImage);
-    this.webcamImage = webcamImage;
+	constructor(fileUploadService: FileUploadService) { 
+		this._fileUploadService = fileUploadService;
+	}
 	
-	var imageBlob = this.dataURItoBlob(this.webcamImage.imageAsDataUrl);
-	var imageFile = this.blobToFile(imageBlob, "name.jpeg");
-	
-	this._fileUploadService.postFileToUpload(imageFile).subscribe(data => 
-	{
-      // do something, if upload success
-	  console.log(data);
-    }, error => 
-	{
-        console.log(error);
-    });
-  }
+    ngAfterViewInit(): void {
+        if (this.videoElement && this.videoElement.nativeElement) {
+            this.video = this.videoElement.nativeElement as HTMLVideoElement;
+            if (this.video) {
+                this.getMediaStreamPromise({ video: true })
+                    .then((stream: MediaStream) => this.video.srcObject = stream);
 
-  public cameraWasSwitched(deviceId: string): void {
-    console.log('active device: ' + deviceId);
-    this.deviceId = deviceId;
-  }
-
-  public get triggerObservable(): Observable<void> {
-    return this.trigger.asObservable();
-  }
-
-  public get nextWebcamObservable(): Observable<boolean|string> {
-    return this.nextWebcam.asObservable();
-  }
-  
-  private dataURItoBlob(dataURI) {
-    // convert base64 to raw binary data held in a string
-    // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
-    var byteString = atob(dataURI.split(',')[1]);
-
-    // separate out the mime component
-    var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-
-    // write the bytes of the string to an ArrayBuffer
-    var ab = new ArrayBuffer(byteString.length);
-    var ia = new Uint8Array(ab);
-    for (var i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
+                this.video.height = window.innerHeight;
+            }
+        }
+        if (this.canvasElement && this.canvasElement.nativeElement) {
+            this.canvas = this.canvasElement.nativeElement as HTMLCanvasElement;
+        }
     }
 
-    //Old Code
-    //write the ArrayBuffer to a blob, and you're done
-    //var bb = new BlobBuilder();
-    //bb.append(ab);
-    //return bb.getBlob(mimeString);
+    private getMediaStreamPromise(constraints: MediaStreamConstraints): Promise<MediaStream> {
+        if (navigator.mediaDevices.getUserMedia) {
+            return navigator.mediaDevices.getUserMedia(constraints);
+        }
 
-    //New Code
-    return new Blob([ab], {type: mimeString});
+        let getMediaStream = ((
+                navigator['webkitGetUserMedia'] ||
+                navigator['mozGetUserMedia']) as (c: MediaStreamConstraints) => Promise<MediaStream>
+            ).bind(navigator);
 
-  }
-  
-  private blobToFile = (theBlob: Blob, fileName:string): File => {
-    var b: any = theBlob;
-    //A Blob() is almost a File() - it's just missing the two properties below which we will add
-    b.lastModifiedDate = new Date();
-    b.name = fileName;
-    
-    //Cast to a File() type
-    return <File>theBlob;
-  }
+        return getMediaStream(constraints);
+    }
+
+    public onTakePhoto(details: PhotoDetails): void {
+        if (this.canvas) {
+			const context = this.canvas.getContext('2d');
+			if (context) {
+				context.drawImage(this.video, 0, 0, this.imageWidth, this.imageHeight);
+				
+				var name = `${details.photoId}.image.png`;
+				const url = this.canvas.toDataURL('image/png');
+				localStorage.setItem(name, url);
+			
+				var imageBlob = this.dataURItoBlob(url);
+				var imageFile = this.blobToFile(imageBlob, name);
+				
+				this._fileUploadService.postFileToUpload(imageFile).subscribe(data => {
+					console.log(data);
+				}, error => {
+					console.log(error);
+				});
+			}
+        }
+    }
+
+    public onStateChanged(state: WizardState): void {
+        //TODO:
+    }
+
+    public adjustVideoHeight(event): void {
+        if (event && this.video) {
+            this.video.height = event.target.innerHeight;
+        }
+    }
+	private dataURItoBlob(dataURI) {
+		// convert base64 to raw binary data held in a string
+		// doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+		var byteString = atob(dataURI.split(',')[1]);
+
+		// separate out the mime component
+		var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+
+		// write the bytes of the string to an ArrayBuffer
+		var ab = new ArrayBuffer(byteString.length);
+		var ia = new Uint8Array(ab);
+		for (var i = 0; i < byteString.length; i++) {
+			ia[i] = byteString.charCodeAt(i);
+		}
+
+		//Old Code
+		//write the ArrayBuffer to a blob, and you're done
+		//var bb = new BlobBuilder();
+		//bb.append(ab);
+		//return bb.getBlob(mimeString);
+
+		//New Code
+		return new Blob([ab], {type: mimeString});
+
+	}
+	  
+	private blobToFile = (theBlob: Blob, fileName:string): File => {
+		var b: any = theBlob;
+		//A Blob() is almost a File() - it's just missing the two properties below which we will add
+		b.lastModifiedDate = new Date();
+		b.name = fileName;
+		
+		//Cast to a File() type
+		return <File>theBlob;
+	}
 }

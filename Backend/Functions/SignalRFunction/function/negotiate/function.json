@@ -1,0 +1,24 @@
+{
+  "disabled": false,
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req"
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "res"
+    },
+    {
+      "type": "signalRConnectionInfo",
+      "name": "connectionInfo",
+      "hubName": "broadcast",
+      "direction": "in"
+    }
+  ],
+  "scriptFile": "../bin/WheresBitly.Backend.SignalR.Function.dll",
+  "entryPoint": "WheresBitly.Backend.SignalR.Function.negotiate.NegotiateFunction.Run"
+}

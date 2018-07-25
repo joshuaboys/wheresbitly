@@ -1,0 +1,74 @@
+<div class="overlay" [ngClass]="{ 'hide': isTakingPhoto }">
+
+    <ccc-audio #resetSound [src]="'https://www.soundjay.com/button/sounds/beep-027.mp3'"></ccc-audio>
+    <ccc-audio #startSound [src]="'https://www.soundjay.com/switch/sounds/switch-19.mp3'"></ccc-audio>
+    <ccc-audio #sendSound [src]="'https://www.soundjay.com/button/sounds/button-43.mp3'"></ccc-audio>
+		
+
+    <div class="grid">
+        <header class="grid-header">
+					<div class="countdown black-glow" [attr.data-countdown]="countDownTimer" >{{ expireTimeString }}</div>	
+			<img *ngIf="findImage!=null" src="{{ findImage }}" width="33.3%" />
+
+
+		</header>
+
+        <div class="grid-left">
+
+        </div>
+
+        <div class="grid-content">
+	        <div *ngIf="isIdle" style="background-color:black; color:white; padding:16px;">
+				<h3 style="color:yellow;">Welcome!</h3>
+				<h4>Help us find <span style="color:red;">Bitly</span> by taking photos of <span style="color:pink;">DDD attendees</span> with the bitly sticker visible on there badge</h4>
+            </div>
+			<div *ngIf="isIdle" >
+				<br/>
+                <button class="ccc-button ccc-bg-morph" (click)="start(startSound)">
+                    <i class="glyphicon glyphicon-camera"></i><br /> Find Bitly
+                </button> 
+			</div>
+            <div *ngIf="isTimeout">
+                <div class="countdown black-glow" [attr.data-countdown]="countDownTimer"> Out of time! a New game will start soon...</div>
+            </div>
+
+            <div *ngIf="isTakePhoto">
+                <ccc-audio [src]="'https://www.soundjay.com/mechanical/sounds/camera-shutter-click-07.mp3'"
+                           [autoplay]="true">
+                </ccc-audio>
+            </div>
+			<div style="height:50%"><br/></div>
+        </div>
+
+        <div class="grid-right">
+            <button *ngIf="isPresentingPhotos" class="ccc-button ccc-bg-orange" (click)="send(sendSound)">
+                <i class="glyphicon glyphicon-send"></i><br /> Send
+            </button>
+
+        </div>
+
+        <footer class="grid-footer">
+
+			<button *ngIf="!isIdle" class="ccc-button ccc-bg-orange" (click)="generate(sendSound)">
+				<div *ngIf="isSend">
+						<i class="glyphicon glyphicon-repeat fast-spinner"></i><br /> Sending
+				</div>
+				<div *ngIf="!isSend">
+						<i class="glyphicon glyphicon-send"></i><br /> Send
+				</div>
+			</button>
+			<button *ngIf="isTakePhoto" class="ccc-button ccc-bg-blue" (click)="reset(resetSound)">
+				<i class="glyphicon glyphicon-share-alt" style="transform: scale(-1, 1);"></i><br /> Retake
+            </button>
+
+            <button *ngIf="isSend" class="ccc-button ccc-bg-blue" (click)="reset(resetSound)" [disabled]="isSend">
+             <i class="glyphicon glyphicon-ok"></i><br /> Done 
+            </button>
+		
+
+            <img *ngIf="isIdle" class="black-glow" src="../../assets/ccc-horizontal-logo.png" width="100%" />
+
+        </footer>
+    </div>
+
+</div>

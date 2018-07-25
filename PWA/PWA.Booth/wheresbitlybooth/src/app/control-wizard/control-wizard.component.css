@@ -1,0 +1,146 @@
+:host {
+    overflow: hidden !important;
+}
+
+.overlay {
+    z-index: 777;
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: flex-start;
+    justify-content: center;
+    align-items: center;
+}
+
+div.overlay {
+    flex-grow: 1;
+}
+
+.overlay.hide {
+    display: none;
+}
+
+.start-btn {
+    font-size: 60px;
+    padding: 32px 64px;
+    border-radius: 12px;
+    border-width: 0px;
+    color: whitesmoke;
+    background-color: #f15322;
+}
+
+.countdown {
+    color: whitesmoke;
+    font-family: "Comic Sans MS", cursive, sans-serif;
+    font-size: 8em;
+}
+
+.countdown[data-countdown*='3'] {
+    color: #ecd290;
+}
+
+.countdown[data-countdown*='2'] {
+    color: #f15322;
+}
+
+.countdown[data-countdown*='1'] {
+    color: #688b8b;
+}
+
+.anchor-bottom {
+    margin-top: auto;
+}
+
+.card {
+    display: flex;
+    flex-direction: row;    
+}
+
+.col-1 {
+    flex-direction: column;
+}
+
+.col-2 {
+    flex-direction: column;
+    width: 100%;
+}
+
+.bottom {
+    flex-shrink: 0;
+}
+
+.grid {
+    display: grid;
+    grid-gap: 10px;
+    padding: 10px;
+    grid-template-areas: 'header header header' 'left content right' 'footer footer footer';
+    height: 100%;
+    width: 100%;
+    align-items: center;
+    text-align: center;
+}
+
+.grid-header {
+    grid-area: header;
+}
+
+.grid-content {
+    grid-area: content;
+    align-content: center
+}
+
+.grid-left {
+    grid-area: left;
+}
+
+.grid-right {
+    grid-area: right;
+}
+
+.grid-footer {
+    grid-area: footer;
+}
+
+.w-100 {
+    width: 100%;
+}
+
+.fs-38 {
+    font-size: 38px;
+}
+
+.ccc-border {
+    border: 5px solid #1a1915;
+    box-shadow: 0 0 80px #010101;
+}
+
+.phone-number {
+    color: white;
+    font-weight: 700;
+    font-size: 4em;
+    min-height: 80px;
+    background-color: rgba(0,0,0,.5);
+    box-shadow: 0 0 80px #010101;
+}
+
+.ccc-bg-morph {
+    -webkit-animation: bg-morph 9s infinite linear;
+    animation: bg-morph 9s infinite linear;
+}
+
+@-webkit-keyframes bg-morph {
+    0% { background-color: #ecd290; }
+    33% { background-color: #f15322; }
+    66% { background-color: #688b8b; }
+    100% { background-color: #ecd290; }
+}
+
+@keyframes bg-morph {
+    0% { background-color: #ecd290; }
+    33% { background-color: #f15322; }
+    66% { background-color: #688b8b; }
+    100% { background-color: #ecd290; }
+}

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WheresBitly.Backend.SignalR.Function": {
+      "commandName": "Project",
+      "commandLineArgs": "host start --pause-on-error --cors *"
+    }
+  }
+}
