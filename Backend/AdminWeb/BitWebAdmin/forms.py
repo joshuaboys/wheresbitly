@@ -12,4 +12,4 @@ class FindUserForm(Form):
 
 class ConfirmUserForm(Form):
     user_name = HiddenField()
-    user_confirmed = BooleanField('Confirm Player')
+    user_confirmed = BooleanField('Confirm Player',[InputRequired()])

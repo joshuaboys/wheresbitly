@@ -53,55 +53,83 @@ def findplayer():
 
 @app.route('/confirmplayer', methods=['POST'])
 def confirmplayer():
-    
-    form = ConfirmUserForm()
+   
+    form = ConfirmUserForm() 
     form.user_name = request.form['user_name']
     img_user = ""
-    user_lookup_status = ""
+    player_lookup_status = ""
+    player_save_status = ""
 
     client = document_client.DocumentClient(config_cosmos.COSMOSDB_HOST, {'masterKey': config_cosmos.COSMOSDB_KEY})
 
-    try:
-        
-        # Try and find the user registration for the user
-        userDoc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION + '/docs/' + request.form['user_name'])
-
-    except errors.DocumentDBError as e:
-        tc.track_exception()
-        tc.flush()
-        if e.status_code == 404:
-            user_lookup_status = "Could not find user (404)"
-        else:
-            user_lookup_status = "Unknown error finding user (" + e.status_code + ")"
-
-    try:
-
-        # If we found the user go ahead and try and find a valid Face image for them
-        if user_lookup_status == "":
-            options = {} 
-            options['maxItemCount'] = 1
-
-            # Select image for user (may be multiple so we will take only 1). Ensure it's an image with a valid Face ID and not just a random image
-            query = {
-                    "query": "SELECT * FROM u WHERE u.userid=@userId AND u.faceid<>''",
-                    "parameters" : [
-                            { "name": "@userId", "value": request.form['user_name'] }
-                        ]
-                    }
-
-            images = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_IMAGES_COSMOSDB_COLLECTION, query, options))
-            img_user = images[0]['imgurl']
+    if form.validate_on_submit():
     
-    except:
-        tc.track_exception()
-        tc.flush()
+        # Save the form details to Cosmos
+        try:
+
+            # Try and find the user registration for the player
+            userDoc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION + '/docs/' + request.form['user_name'])
+
+            # Update the registration to confirmed so player can play
+            userDoc['confirmed'] = form.user_confirmed.data
+            client.ReplaceDocument(userDoc['_self'], userDoc)
+
+            player_save_status = "Saved OK"
+
+        except errors.DocumentDBError as e:
+            tc.track_exception()
+            tc.flush()
+                
+            player_save_status = "Unknown error saving user (" + e.status_code + ")"
+
+    else:
+
+        # Try and find the user registration for the player and at least one valid Face API processed selfie
+
+        try:
+                    
+            userDoc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION + '/docs/' + request.form['user_name'])
+
+            # Set the checked state of the field based on true / false in Cosmos
+            form.user_confirmed.checked = userDoc['confirmed']
+           
+        except errors.DocumentDBError as e:
+            tc.track_exception()
+            tc.flush()
+            if e.status_code == 404:
+                player_lookup_status = "Could not find user (404)"
+            else:
+                player_lookup_status = "Unknown error finding user (" + e.status_code + ")"
+
+        try:
+
+            # If we found the user go ahead and try and find a valid Face image for them
+            if player_lookup_status == "":
+                options = {} 
+                options['maxItemCount'] = 1
+
+                # Select image for user (may be multiple so we will take only 1). Ensure it's an image with a valid Face ID and not just a random image
+                query = {
+                        "query": "SELECT * FROM u WHERE u.userid=@userId AND u.faceid<>''",
+                        "parameters" : [
+                                { "name": "@userId", "value": request.form['user_name'] }
+                            ]
+                        }
+
+                images = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_IMAGES_COSMOSDB_COLLECTION, query, options))
+                img_user = images[0]['imgurl']
+    
+        except:
+            tc.track_exception()
+            tc.flush()
 
     return render_template(
         'confirmplayer.html',
         title='Confirm Player',
         year=datetime.now().year,
         form=form,
-        userstatus=user_lookup_status,
+        playerlookup=player_lookup_status,
+        playersave=player_save_status,
         imgurl=img_user
     )
 
