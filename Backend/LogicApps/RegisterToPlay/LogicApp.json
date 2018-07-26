@@ -195,32 +195,83 @@
                       },
                       "runAfter": {}
                     },
-                    "Write_image_log_to_DB": {
-                      "type": "ApiConnection",
-                      "inputs": {
-                        "host": {
-                          "connection": {
-                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                    "Did_we_add_a_face_successfully": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "not": {
+                              "equals": [
+                                "@actions('Add_a_person_face')['status']",
+                                "Failed"
+                              ]
+                            }
                           }
-                        },
-                        "method": "post",
-                        "body": "@outputs('Build_image_log_message')",
-                        "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('regourls')}/docs"
-                      },
-                      "runAfter": {
-                        "Build_image_log_message": [
-                          "Succeeded"
                         ]
-                      }
-                    },
-                    "Build_image_log_message": {
-                      "type": "Compose",
-                      "inputs": {
-                        "reqid": "@{variables('RequestIdentifier')}",
-                        "userid": "@{triggerBody()?['UserDetails']?['UserName']}",
-                        "faceid": "@{body('Add_a_person_face')?['persistedFaceId']}",
-                        "id": "@{guid()}",
-                        "imgurl": "@{items('For_each')}"
+                      },
+                      "actions": {
+                        "Detect_faces": {
+                          "type": "ApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connection": {
+                                "name": "@parameters('$connections')['faceapi']['connectionId']"
+                              }
+                            },
+                            "method": "post",
+                            "body": {
+                              "url": "@{items('For_each')}"
+                            },
+                            "path": "/face/v1.0/detect",
+                            "queries": {
+                              "returnFaceId": "true",
+                              "returnFaceAttributes": "age,gender,headPose,smile,facialHair,glasses",
+                              "returnFaceLandmarks": "true"
+                            }
+                          },
+                          "runAfter": {}
+                        },
+                        "For_each_2": {
+                          "type": "Foreach",
+                          "foreach": "@body('Detect_faces')",
+                          "actions": {
+                            "Build_image_log_message": {
+                              "type": "Compose",
+                              "inputs": {
+                                "reqid": "@{variables('RequestIdentifier')}",
+                                "userid": "@{triggerBody()?['UserDetails']?['UserName']}",
+                                "faceid": "@{body('Add_a_person_face')?['persistedFaceId']}",
+                                "id": "@{guid()}",
+                                "imgurl": "@{items('For_each')}",
+                                "faceRectangle": "@items('For_each_2')?['faceRectangle']"
+                              },
+                              "runAfter": {}
+                            },
+                            "Write_image_log_to_DB": {
+                              "type": "ApiConnection",
+                              "inputs": {
+                                "host": {
+                                  "connection": {
+                                    "name": "@parameters('$connections')['documentdb']['connectionId']"
+                                  }
+                                },
+                                "method": "post",
+                                "body": "@outputs('Build_image_log_message')",
+                                "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('regourls')}/docs"
+                              },
+                              "runAfter": {
+                                "Build_image_log_message": [
+                                  "Succeeded"
+                                ]
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Detect_faces": [
+                              "Succeeded"
+                            ]
+                          }
+                        }
                       },
                       "runAfter": {
                         "Add_a_person_face": [
