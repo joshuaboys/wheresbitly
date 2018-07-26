@@ -224,7 +224,7 @@ def gameadmin():
          
         doc['activeevent'] = form.event_location.data
         doc['persongroupid'] = form.person_group.data
-        doc['activetier'] = form.game_round.data
+        doc['activetier'] = int(form.game_round.data)
         replaced_document = client.ReplaceDocument(doc['_self'], doc)
 
         # try:
@@ -253,9 +253,9 @@ def gameadmin():
         options = {} 
         options['maxItemCount'] = 1
 
-        # Select image for user (may be multiple so we will take only 1). Ensure it's an image with a valid Face ID and not just a random image
+        # Select image for user (may be multiple so we will take only 1). Ensure it's an image with a valid Face ID and rectangle and not just a random image
         query = {
-                "query": "SELECT * FROM u WHERE u.userid=@userId AND u.faceid<>''",
+                "query": "SELECT * FROM u WHERE u.userid=@userId AND u.faceid<>'' and u.faceRectangle != null",
                 "parameters" : [
                         { "name": "@userId", "value": new_bit_user['id'] }
                     ]
@@ -268,22 +268,32 @@ def gameadmin():
         # Load one of the player's selfies
         images = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_IMAGES_COSMOSDB_COLLECTION, query, options))
         playerImageUrl = images[0]['imgurl']
+        faceId = images[0]['faceid']
+        rectTop = images[0]['faceRectangle']['top']
+        rectLeft = images[0]['faceRectangle']['left']
+        rectRight = rectLeft + images[0]['faceRectangle']['width']
+        rectBottom = rectTop + images[0]['faceRectangle']['height']
 
         playerImgResponse = requests.get(playerImageUrl)
         playerImage = Image.open(BytesIO(playerImgResponse.content))
 
         # Resize static Bit image to be smaller that selfie
-        resizedBitImage= ImageOps.fit(bitImage,(int(playerImage.width*0.5),int(playerImage.height*0.5)))
+        resizedBitImage= ImageOps.fit(bitImage, (images[0]['faceRectangle']['width'], images[0]['faceRectangle']['height']))
+        
+        # Uncomment to draw a rectangle where the face rectangle has been determined.
+        #dr = ImageDraw.Draw(playerImage)
+        #dr.rectangle((rectLeft, rectTop, rectRight, rectBottom), outline="red")
 
         # Paste Bit into the player's selfie, using alpha mask from Bit image.
-        #TODO: change 0,0 to be four tuple box of face on image (needs change to rego to capture from Face API).
-        playerImage.paste(resizedBitImage,(0,0),resizedBitImage)
+        playerImage.paste(resizedBitImage,(rectLeft, rectTop, rectRight, rectBottom),resizedBitImage)
+
+
 
         # Upload merged image to Blob storage so we can serve on big screen.        
         imgByteArr = io.BytesIO()
         playerImage.save(imgByteArr,'PNG')
         block_blob_service = BlockBlobService(account_name='whereisbitdev01', account_key='qPC1wE0m9DsGH9C2BD/CA4E2IKg+zBuJphBXbFfoJhGhkyFL14gnQCDNR5dW6boO0zk0vLnHFEYoPqG56jDpHw==')
-        block_blob_service.create_blob_from_bytes("entries","testimage1.png", imgByteArr.getvalue(), content_settings=ContentSettings(content_type='image/png'));
+        block_blob_service.create_blob_from_bytes("entries", faceId +".png", imgByteArr.getvalue(), content_settings=ContentSettings(content_type='image/png'));
         
         #####
         # If images processed OK then write content to Cosmos
