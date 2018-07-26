@@ -3,8 +3,7 @@ Routes and views for the flask application.
 """
 
 import operator
-from PIL import Image
-from PIL import ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 import requests
 import io
 from io import BytesIO
@@ -20,7 +19,7 @@ import config_cosmos
 import pydocumentdb
 import pydocumentdb.document_client as document_client
 import pydocumentdb.errors as errors
-from azure.storage.blob import BlockBlobService, PublicAccess
+from azure.storage.blob import BlockBlobService, ContentSettings
 from datetime import datetime
 from flask import render_template
 from flask import request
@@ -264,9 +263,7 @@ def gameadmin():
 
         # Load the static Bit character image (has alpha background)
         bitImgResponse = requests.get("https://whereisbitdev01.blob.core.windows.net/bitsource/ScottGu.png?sp=r&st=2018-07-25T22:43:24Z&se=2019-07-26T06:43:24Z&spr=https&sv=2017-11-09&sig=KgJP4ShxZ%2BE4cJd%2B5MPSu5CJn9kix226mIK2%2BtXymDE%3D&sr=b")
-        bitImage = Image.open(BytesIO(bitImgResponse.content))
-
-        resizedBitImage = bitImage.resize(bitImage.size[0] * 0.45, bitImage.size[1] * 0.45)
+        bitImage = Image.open(BytesIO(bitImgResponse.content))      
 
         # Load one of the player's selfies
         images = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_IMAGES_COSMOSDB_COLLECTION, query, options))
@@ -275,20 +272,18 @@ def gameadmin():
         playerImgResponse = requests.get(playerImageUrl)
         playerImage = Image.open(BytesIO(playerImgResponse.content))
 
-        playerImageDimensions = playerImage.size
+        # Resize static Bit image to be smaller that selfie
+        resizedBitImage= ImageOps.fit(bitImage,(int(playerImage.width*0.5),int(playerImage.height*0.5)))
 
-        # Resize static Bit image to match player selfie
-        #resizedBitImage = bitImage.resize(playerImageDimensions, Image.ANTIALIAS)
+        # Paste Bit into the player's selfie, using alpha mask from Bit image.
+        #TODO: change 0,0 to be four tuple box of face on image (needs change to rego to capture from Face API).
+        playerImage.paste(resizedBitImage,(0,0),resizedBitImage)
 
-        # Paste Bit into the player's selfie
-        playerImage.paste(resizedBitImage)
-        playerImage.show()
-
+        # Upload merged image to Blob storage so we can serve on big screen.        
         imgByteArr = io.BytesIO()
         playerImage.save(imgByteArr,'PNG')
-
         block_blob_service = BlockBlobService(account_name='whereisbitdev01', account_key='qPC1wE0m9DsGH9C2BD/CA4E2IKg+zBuJphBXbFfoJhGhkyFL14gnQCDNR5dW6boO0zk0vLnHFEYoPqG56jDpHw==')
-        block_blob_service.create_blob_from_bytes("entries","testimage1.png", imgByteArr.getvalue());
+        block_blob_service.create_blob_from_bytes("entries","testimage1.png", imgByteArr.getvalue(), content_settings=ContentSettings(content_type='image/png'));
         
         #####
         # If images processed OK then write content to Cosmos
