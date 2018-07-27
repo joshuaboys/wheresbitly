@@ -13,7 +13,7 @@ import face_config
 import storage_config
 from forms import GameAdminForm, ConfirmUserForm, FindUserForm, EventAdminForm
 from flask_wtf import Form
-from wtforms.fields import StringField, BooleanField
+from wtforms.fields import StringField, BooleanField, SelectField
 from wtforms.validators import InputRequired
 import config_cosmos
 import pydocumentdb
@@ -207,24 +207,20 @@ def eventadmin():
 
     doc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.GAME_CONFIG_COSMOSDB_COLLECTION + '/docs/' + config_cosmos.GAME_CONFIG_COSMOSDB_DOCUMENT)
 
-
     if form.validate_on_submit():
 
         doc['activeevent'] = form.event_location
         doc['persongroupid'] = form.person_group
-        # replaced_document = client.ReplaceDocument(doc['_self'], doc)
-
+        client.ReplaceDocument(doc['_self'], doc)
 
     else:
 
-
-        admin_form_object.game_locale = doc['activeevent']
-        admin_form_object.person_group_id = doc['persongroupid']
+        form.event_location.data = doc['activeevent']
+        form.person_group.data = doc['persongroupid']
 
     return render_template(
         'eventadmin.html', 
         year=datetime.now().year,
-	    admin_form_object = admin_form_object,
 	    form = form)
 
 @app.route('/gameadmin', methods=['GET', 'POST'])
@@ -232,10 +228,10 @@ def gameadmin():
     form = GameAdminForm()
 
     # Create a model to pass to results.html
-    class GameAdminObject:
-        game_round = 0
+    #class GameAdminObject:
+    #    game_round = 0
 
-    admin_form_object = GameAdminObject()
+    #admin_form_object = GameAdminObject()
 
     client = document_client.DocumentClient(config_cosmos.COSMOSDB_HOST, {'masterKey': config_cosmos.COSMOSDB_KEY})
 
@@ -348,25 +344,16 @@ def gameadmin():
             return render_template(
                 'saved.html',
                 bitly=bitly_user_handle,
+                gameround=form.game_round.data,
                 bitlyurl=bitly_blob_url,
                 year=datetime.now().year)
-
-        #return render_template(
-        #    'gameadmin.html', 
-        #    year=datetime.now().year,
-	       # form = form)
-
-        
+       
     else:
     
         # load existing values into the form
-
-        form.game_round.data = doc['activetier']
-
-        admin_form_object.game_round = doc['activetier']
-                
+        form = GameAdminForm(game_round=doc['activetier'])
+               
         return render_template(
             'gameadmin.html', 
             year=datetime.now().year,
-		    admin_form_object = admin_form_object,
 		    form = form)
