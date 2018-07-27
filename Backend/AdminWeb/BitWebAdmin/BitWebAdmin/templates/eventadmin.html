@@ -1,9 +1,10 @@
 ﻿{% extends "layout.html" %}
 {% block content %}
-<h2>Game Admin</h2>
+<h2>Event Admin</h2>
 <form action="" method="post" name="gameadmin">
     {{form.hidden_tag()}}
-    {{form.game_round.label}} {{form.game_round}}<br />
+    {{form.event_location.label}} {{form.event_location}}<br />
+    {{form.person_group.label}} {{form.person_group}}<br/>
     <button class="btn btn-primary" type="submit">Update</button>
 </form>
 {% endblock %}

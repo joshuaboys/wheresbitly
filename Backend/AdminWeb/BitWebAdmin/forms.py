@@ -1,15 +1,17 @@
 from flask_wtf import Form
 from wtforms.validators import InputRequired
-from wtforms import StringField, BooleanField, HiddenField
+from wtforms.fields import StringField, BooleanField, HiddenField, SelectField
 
-class GameAdminForm(Form):
+class EventAdminForm(Form):
     event_location = StringField('Event Location')
     person_group = StringField('Person Group')
-    game_round = StringField('Game Round')
+
+class GameAdminForm(Form):
+    game_round = SelectField('Game Round', choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4'), ('5', '5'), ('6', '6')])
 
 class FindUserForm(Form):
-    user_name = StringField('Twitter Handle',[InputRequired()])
+    user_name = StringField('Twitter Handle', [InputRequired()])
 
 class ConfirmUserForm(Form):
     user_name = HiddenField()
-    user_confirmed = BooleanField('Confirm Player',[InputRequired()])
+    user_confirmed = BooleanField('Confirm Player', [InputRequired()])

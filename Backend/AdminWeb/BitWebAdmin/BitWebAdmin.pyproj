@@ -54,6 +54,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="BitWebAdmin\templates\findplayer.html" />
+    <Content Include="BitWebAdmin\templates\eventadmin.html" />
     <Content Include="BitWebAdmin\templates\gameadmin.html" />
     <Content Include="BitWebAdmin\templates\trainmodel.html" />
     <Content Include="requirements.txt" />

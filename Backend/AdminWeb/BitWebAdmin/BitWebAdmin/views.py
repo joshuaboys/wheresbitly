@@ -11,11 +11,10 @@ import random
 import cognitive_face as CF
 import face_config
 import storage_config
-from forms import GameAdminForm, ConfirmUserForm, FindUserForm
+from forms import GameAdminForm, ConfirmUserForm, FindUserForm, EventAdminForm
 from flask_wtf import Form
-from wtforms import StringField
+from wtforms.fields import StringField, BooleanField
 from wtforms.validators import InputRequired
-from wtforms import BooleanField
 import config_cosmos
 import pydocumentdb
 import pydocumentdb.document_client as document_client
@@ -57,8 +56,6 @@ def findplayer():
         year=datetime.now().year,
         form = form
     )
-
-
 
 @app.route('/confirmplayer', methods=['POST'])
 def confirmplayer():
@@ -142,16 +139,6 @@ def confirmplayer():
         imgurl=img_user
     )
 
-@app.route('/about')
-def about():
-    """Renders the about page."""
-    return render_template(
-        'about.html',
-        title='About',
-        year=datetime.now().year,
-        message='Your application description page.'
-    )
-
 @app.route('/trainmodel', methods=['GET'])
 def trainmodel(): 
 
@@ -205,15 +192,48 @@ def confirmrego():
 
     return response
 
+@app.route('/eventadmin', methods=['GET', 'POST'])
+def eventadmin(): 
+    form = EventAdminForm()
+
+    # Create a model to pass to results.html
+    class EventAdminObject:
+        game_locale = ""
+        person_group_id = ""
+
+    admin_form_object = EventAdminObject()
+
+    client = document_client.DocumentClient(config_cosmos.COSMOSDB_HOST, {'masterKey': config_cosmos.COSMOSDB_KEY})
+
+    doc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.GAME_CONFIG_COSMOSDB_COLLECTION + '/docs/' + config_cosmos.GAME_CONFIG_COSMOSDB_DOCUMENT)
+
+
+    if form.validate_on_submit():
+
+        doc['activeevent'] = form.event_location
+        doc['persongroupid'] = form.person_group
+        # replaced_document = client.ReplaceDocument(doc['_self'], doc)
+
+
+    else:
+
+
+        admin_form_object.game_locale = doc['activeevent']
+        admin_form_object.person_group_id = doc['persongroupid']
+
+    return render_template(
+        'eventadmin.html', 
+        year=datetime.now().year,
+	    admin_form_object = admin_form_object,
+	    form = form)
+
 @app.route('/gameadmin', methods=['GET', 'POST'])
 def gameadmin(): 
     form = GameAdminForm()
 
     # Create a model to pass to results.html
     class GameAdminObject:
-        game_locale = ""
         game_round = 0
-        person_group_id = ""
 
     admin_form_object = GameAdminObject()
 
@@ -221,10 +241,8 @@ def gameadmin():
 
     doc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.GAME_CONFIG_COSMOSDB_COLLECTION + '/docs/' + config_cosmos.GAME_CONFIG_COSMOSDB_DOCUMENT)
 
-    if form.validate_on_submit(): # is user submitted vote  
+    if form.validate_on_submit():
          
-        doc['activeevent'] = form.event_location.data
-        doc['persongroupid'] = form.person_group.data
         doc['activetier'] = int(form.game_round.data)
         replaced_document = client.ReplaceDocument(doc['_self'], doc)
 
@@ -343,13 +361,9 @@ def gameadmin():
     
         # load existing values into the form
 
-        form.event_location.data = doc['activeevent']
-        form.person_group.data = doc['persongroupid']
         form.game_round.data = doc['activetier']
 
-        admin_form_object.game_locale = doc['activeevent']
         admin_form_object.game_round = doc['activetier']
-        admin_form_object.person_group_id = doc['persongroupid']
                 
         return render_template(
             'gameadmin.html', 
