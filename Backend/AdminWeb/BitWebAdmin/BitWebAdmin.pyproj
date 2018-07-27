@@ -40,6 +40,9 @@
     <Compile Include="runserver.py" />
     <Compile Include="BitWebAdmin\__init__.py" />
     <Compile Include="BitWebAdmin\views.py" />
+    <Compile Include="storage_config.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="BitWebAdmin\" />

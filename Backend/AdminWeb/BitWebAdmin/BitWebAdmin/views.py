@@ -10,6 +10,7 @@ from io import BytesIO
 import random
 import cognitive_face as CF
 import face_config
+import storage_config
 from forms import GameAdminForm, ConfirmUserForm, FindUserForm
 from flask_wtf import Form
 from wtforms import StringField
@@ -227,112 +228,115 @@ def gameadmin():
         doc['activetier'] = int(form.game_round.data)
         replaced_document = client.ReplaceDocument(doc['_self'], doc)
 
-        # try:
-            
-        # Select confirmed users that haven't been Bit before. Support groups of up to 1,000 players because that's the max for a standard Person Group in Face API.
-        query = {
-                "query": "SELECT TOP 1000 * FROM u WHERE u.confirmed=true AND u.byteround=0",
-                }
-            
-        results = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION, query))
+        try:
 
-        # total available users 
-        item_count = len(results)
-        # select a random integer representing position in list to select
-        user_to_select = random.randint(0,item_count-1)
-        # select new Bit user from list - list consists of document ID
-        new_bit_user = results[user_to_select]
+            # Select confirmed users that haven't been Bit before. Support groups of up to 1,000 players because that's the max for a standard Person Group in Face API.
+            query = {
+                    "query": "SELECT TOP 1000 u.id FROM u WHERE u.confirmed=true AND u.byteround=0",
+                    }
+     
+            results = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION, query))
 
-        # Read the full Cosmos document for the user
-        userDoc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION + '/docs/' + new_bit_user['id'])
+            # total available users 
+            item_count = len(results)
+            # select a random integer representing position in list to select
+            user_to_select = random.randint(0,item_count-1)
+            # select new Bit user from list - list consists of document ID
+            new_bit_user = results[user_to_select]
+
+            # Read the full Cosmos document for the user
+            userDoc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_COSMOSDB_COLLECTION + '/docs/' + new_bit_user['id'])
 
             
        
-        # Load Image for selected play (we know they have one because we eyeball it before confirming them at the stand)
+            # Load Image for selected play (we know they have one because we eyeball it before confirming them at the stand)
 
-        options = {} 
-        options['maxItemCount'] = 1
+            options = {} 
+            options['maxItemCount'] = 1
 
-        # Select image for user (may be multiple so we will take only 1). Ensure it's an image with a valid Face ID and rectangle and not just a random image
-        query = {
-                "query": "SELECT * FROM u WHERE u.userid=@userId AND u.faceid<>'' and u.faceRectangle != null",
-                "parameters" : [
-                        { "name": "@userId", "value": new_bit_user['id'] }
-                    ]
-                }
+            # Select image for user (may be multiple so we will take only 1). Ensure it's an image with a valid Face ID and rectangle and not just a random image
+            query = {
+                    "query": "SELECT * FROM u WHERE u.userid=@userId AND u.faceid<>'' and u.faceRectangle != null",
+                    "parameters" : [
+                            { "name": "@userId", "value": new_bit_user['id'] }
+                        ]
+                    }
 
-        # Load the static Bit character image (has alpha background)
-        bitImgResponse = requests.get("https://whereisbitdev01.blob.core.windows.net/bitsource/ScottGu.png?sp=r&st=2018-07-25T22:43:24Z&se=2019-07-26T06:43:24Z&spr=https&sv=2017-11-09&sig=KgJP4ShxZ%2BE4cJd%2B5MPSu5CJn9kix226mIK2%2BtXymDE%3D&sr=b")
-        bitImage = Image.open(BytesIO(bitImgResponse.content))      
+            # Load the static Bit character image (has alpha background)
+            bitImgResponse = requests.get("https://whereisbitdev01.blob.core.windows.net/bitsource/ScottGu.png?sp=r&st=2018-07-25T22:43:24Z&se=2019-07-26T06:43:24Z&spr=https&sv=2017-11-09&sig=KgJP4ShxZ%2BE4cJd%2B5MPSu5CJn9kix226mIK2%2BtXymDE%3D&sr=b")
+            bitImage = Image.open(BytesIO(bitImgResponse.content))      
 
-        # Load one of the player's selfies
-        images = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_IMAGES_COSMOSDB_COLLECTION, query, options))
-        playerImageUrl = images[0]['imgurl']
-        faceId = images[0]['faceid']
-        rectTop = images[0]['faceRectangle']['top']
-        rectLeft = images[0]['faceRectangle']['left']
-        rectRight = rectLeft + images[0]['faceRectangle']['width']
-        rectBottom = rectTop + images[0]['faceRectangle']['height']
+            # Load one of the player's selfies
+            images = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USERS_IMAGES_COSMOSDB_COLLECTION, query, options))
+            playerImageUrl = images[0]['imgurl']
+            faceId = images[0]['faceid']
+            rectTop = images[0]['faceRectangle']['top']
+            rectLeft = images[0]['faceRectangle']['left']
+            rectRight = rectLeft + images[0]['faceRectangle']['width']
+            rectBottom = rectTop + images[0]['faceRectangle']['height']
 
-        playerImgResponse = requests.get(playerImageUrl)
-        playerImage = Image.open(BytesIO(playerImgResponse.content))
+            playerImgResponse = requests.get(playerImageUrl)
+            playerImage = Image.open(BytesIO(playerImgResponse.content))
 
-        # Resize static Bit image to be smaller that selfie
-        resizedBitImage= ImageOps.fit(bitImage, (images[0]['faceRectangle']['width'], images[0]['faceRectangle']['height']))
+            # Resize static Bit image to be smaller that selfie
+            resizedBitImage= ImageOps.fit(bitImage, (images[0]['faceRectangle']['width'], images[0]['faceRectangle']['height']))
         
-        # Uncomment to draw a rectangle where the face rectangle has been determined.
-        #dr = ImageDraw.Draw(playerImage)
-        #dr.rectangle((rectLeft, rectTop, rectRight, rectBottom), outline="red")
+            # Uncomment to draw a rectangle where the face rectangle has been determined.
+            #dr = ImageDraw.Draw(playerImage)
+            #dr.rectangle((rectLeft, rectTop, rectRight, rectBottom), outline="red")
 
-        # Paste Bit into the player's selfie, using alpha mask from Bit image.
-        playerImage.paste(resizedBitImage,(rectLeft, rectTop, rectRight, rectBottom),resizedBitImage)
+            # Paste Bit into the player's selfie, using alpha mask from Bit image.
+            playerImage.paste(resizedBitImage,(rectLeft, rectTop, rectRight, rectBottom),resizedBitImage)
 
-
-
-        # Upload merged image to Blob storage so we can serve on big screen.        
-        imgByteArr = io.BytesIO()
-        playerImage.save(imgByteArr,'PNG')
-        block_blob_service = BlockBlobService(account_name='whereisbitdev01', account_key='qPC1wE0m9DsGH9C2BD/CA4E2IKg+zBuJphBXbFfoJhGhkyFL14gnQCDNR5dW6boO0zk0vLnHFEYoPqG56jDpHw==')
-        block_blob_service.create_blob_from_bytes("entries", faceId +".png", imgByteArr.getvalue(), content_settings=ContentSettings(content_type='image/png'));
+            # Upload merged image to Blob storage so we can serve on big screen.        
+            imgByteArr = io.BytesIO()
+            playerImage.save(imgByteArr,'PNG')
+            block_blob_service = BlockBlobService(account_name=storage_config.STORAGE_ACCOUNT, account_key=storage_config.STORAGE_KEY)
+            block_blob_service.create_blob_from_bytes(storage_config.BIT_IMAGE_CONTAINER, faceId +".png", imgByteArr.getvalue(), content_settings=ContentSettings(content_type='image/png'));
         
-        #####
-        # If images processed OK then write content to Cosmos
+            bitly_user_handle = new_bit_user['id']
+            bitly_blob_url = 'https://' + storage_config.STORAGE_ACCOUNT + '.blob.core.windows.net/' + storage_config.BIT_IMAGE_CONTAINER + '/' + faceId + '.png'
 
-        # Set the round ID to be the currently selected round.
-        userDoc['byteround'] = int(form.game_round.data)
-        # Write document back to Cosmos
-        client.ReplaceDocument(userDoc['_self'], userDoc)
+            #####
+            # If images processed OK then write content to Cosmos
 
-
-        #except errors.DocumentDBError as e:
-
-        #    tc.track_exception(e)
-        #    tc.flush()
-
-        #    if e.status_code == 404:
-        #        print("Document doesn't exist")
-        #    elif e.status_code == 400:
-        #        # Can occur when we are trying to query on excluded paths
-        #        print("Bad Request exception occured: ", e)
-        #        pass
-        #    else:
-        #        raise
-
-        #except Exception as ex:
-        #    tc.track_exception(ex)
-        #    tc.flush()
+            # Set the round ID to be the currently selected round.
+            userDoc['byteround'] = int(form.game_round.data)
+            # Write document back to Cosmos
+            client.ReplaceDocument(userDoc['_self'], userDoc)
 
 
-        #finally:  
+        except errors.DocumentDBError as e:
 
-            #return render_template(
-            #    'saved.html', 
-            #    year=datetime.now().year)
+            tc.track_exception(e)
+            tc.flush()
 
-        return render_template(
-            'gameadmin.html', 
-            year=datetime.now().year,
-	        form = form)
+            if e.status_code == 404:
+                print("Document doesn't exist")
+            elif e.status_code == 400:
+                # Can occur when we are trying to query on excluded paths
+                print("Bad Request exception occured: ", e)
+                pass
+            else:
+                raise
+
+        except Exception as ex:
+            tc.track_exception(ex)
+            tc.flush()
+
+
+        finally:  
+
+            return render_template(
+                'saved.html',
+                bitly=bitly_user_handle,
+                bitlyurl=bitly_blob_url,
+                year=datetime.now().year)
+
+        #return render_template(
+        #    'gameadmin.html', 
+        #    year=datetime.now().year,
+	       # form = form)
 
         
     else:

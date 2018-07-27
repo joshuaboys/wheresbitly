@@ -2,5 +2,7 @@
 {% block content %}
 <h2>Game Admin</h2>
 <div id="statustext" class="alert alert-success">Saved!</div>
+<p><strong>Bitly Handle</strong> {{bitly}}</p>
+<img id="playerimage" src="{{bitlyurl}}" /><br /><br />
 <p><a href="{{ url_for('gameadmin') }}" class="btn btn-primary btn-large">Game Configuration &raquo;</a></p>
 {% endblock %}
