@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Where's Bitly - Active Game</title>
+    <link rel="stylesheet" href="css/boot.css" />
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/">Where's Bitly</a>
+            </div>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/Home/About">About</a></li>
+                    <li><a href="/Home/Contact">Contact</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container body-content">
+        
+            
+
+        
+
+<div class="row">
+    <div class="col-md-3">
+        IMAGE
+    </div>
+    <div class="col-md-3">
+        <a class="twitter-timeline" data-theme="dark" href="https://twitter.com/BitWhere?ref_src=twsrc%5Etfw">Tweets by BitWhere</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script> 
+    </div>
+    <div class="col-md-3">
+        <h3>Join In: https://aka.ms/HowToPlayFindBit</h3>
+    </div>
+</div>
+
+        <hr />
+        <footer>
+            <p>&copy; 2018 - Microsoft</p>
+        </footer>
+    </div>
+
+    <script>
+(function() {
+  var gameAPI = "http://localhost:7071/api/ActiveGame?jsoncallback=?";
+  $.getJSON( gameAPI)
+    .done(function( json ) {
+            console.log( json );
+        });
+})();
+</script>
+</body>
+</html>
