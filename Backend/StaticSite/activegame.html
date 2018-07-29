@@ -1,5 +1,4 @@
 
-<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
@@ -9,57 +8,37 @@
     <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
 </head>
 <body>
-    <nav class="navbar navbar-inverse navbar-fixed-top">
-        <div class="container">
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-                <a class="navbar-brand" href="/">Where's Bitly</a>
+    <div class="container">
+        <h2 id="header">Where's Bitly?</h2>
+        <h3 id="roundnumber"></h3>
+        <div class="row justify-content-md-center">
+            <div class="col">
+                <img id="bitimg" src="" width="400" alt="Bitly!"/>
             </div>
-            <div class="navbar-collapse collapse">
-                <ul class="nav navbar-nav">
-                    <li><a href="/">Home</a></li>
-                    <li><a href="/Home/About">About</a></li>
-                    <li><a href="/Home/Contact">Contact</a></li>
-                </ul>
+            <div class="col">
+                <div style="width:400px">
+                <a class="twitter-timeline" data-theme="dark" href="https://twitter.com/BitWhere?ref_src=twsrc%5Etfw">Tweets by BitWhere</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script> 
+                </div>
             </div>
         </div>
-    </nav>
-
-    <div class="container body-content">
-        
-            
-
-        
-
-<div class="row">
-    <div class="col-md-3">
-        IMAGE
-    </div>
-    <div class="col-md-3">
-        <a class="twitter-timeline" data-theme="dark" href="https://twitter.com/BitWhere?ref_src=twsrc%5Etfw">Tweets by BitWhere</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script> 
-    </div>
-    <div class="col-md-3">
-        <h3>Join In: https://aka.ms/HowToPlayFindBit</h3>
-    </div>
-</div>
-
+        <div class="form-group"></div>
+        <div class="row justify-content-md-center">
+             <h4>Join in: https://aka.ms/HowToPlayFindBit</h4>
+        </div>
         <hr />
         <footer>
-            <p>&copy; 2018 - Microsoft</p>
+            <p>&copy; 2018 - Microsoft | <a href="winnergame.html">W</a></p>
         </footer>
     </div>
 
     <script>
 (function() {
-  var gameAPI = "http://localhost:7071/api/ActiveGame?jsoncallback=?";
-  $.getJSON( gameAPI)
+  var gameAPI = "https://bitapidev.azurewebsites.net/api/activegame?code=pgcp8l2V9ffdHTgmShQ/BRtcaYptKk1GjpmxLUQnSW5CAa8yr2cLvA== ";
+  $.getJSON(gameAPI)
     .done(function( json ) {
-            console.log( json );
+            $('#header').text("Where's Bitly? @ " + json.ActiveEvent);
+            $('#bitimg').attr('src', json.BitImgUrl);
+            $("#roundnumber").text("Currently playing: #Byte" + json.ActiveTier);
         });
 })();
 </script>
