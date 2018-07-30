@@ -21,8 +21,7 @@ import pydocumentdb.document_client as document_client
 import pydocumentdb.errors as errors
 from azure.storage.blob import BlockBlobService, ContentSettings
 from datetime import datetime
-from flask import render_template
-from flask import request
+from flask import render_template, request, json
 from flask_basicauth import BasicAuth
 from BitWebAdmin import app
 
@@ -365,3 +364,59 @@ def gameadmin():
             title='Select a new Bit',
             year=datetime.now().year,
 		    form = form)
+
+@app.route('/winner', methods=['GET'])
+def winner():
+    form = GameAdminForm()    
+    form.game_round.choices = [(0,'None'),(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6')]
+    
+    # Cosmos DB client
+    client = document_client.DocumentClient(config_cosmos.COSMOSDB_HOST, {'masterKey': config_cosmos.COSMOSDB_KEY})
+
+
+    if form.validate_on_submit():     
+        # Did user select a round other than 'None'
+        if(int(form.game_round.data) != 0):
+            # If so, set that to be round to load data for
+            game_round = form.game_round.data    
+    else:
+
+        # Read game configuration from Cosmos and use that to try and load data
+        gameConfigDoc = client.ReadDocument('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.GAME_CONFIG_COSMOSDB_COLLECTION + '/docs/' + config_cosmos.GAME_CONFIG_COSMOSDB_DOCUMENT)      
+         # load existing values into the form
+        form.game_round.process_data(gameConfigDoc['activetier']);              
+
+    return render_template(
+        'winner.html',
+        title='Winner View',        
+        year=datetime.now().year,
+		form = form)
+
+
+@app.route('/winnerstatus', methods=['GET'])
+def winnerstatus():
+
+    try:
+        game_round = int(request.args.get('round'))
+    
+        # Cosmos DB client
+        client = document_client.DocumentClient(config_cosmos.COSMOSDB_HOST, {'masterKey': config_cosmos.COSMOSDB_KEY})
+
+        if(game_round != 0):
+
+            # load old winner details from Cosmos
+            query = {
+                        "query": "SELECT TOP 3 * FROM e WHERE e.status='matched_bitly' AND e.gamelevel=@gameLevel",
+                        "parameters" : [
+                                { "name": "@gameLevel", "value": game_round }
+                            ]
+                        }
+
+            winningEntries = list(client.QueryDocuments('dbs/' + config_cosmos.COSMOSDB_DATABASE + '/colls/' + config_cosmos.USER_GAME_ENTRIES_COLLECTION, query))
+
+            return json.dumps(winningEntries)
+    except:
+        tc.track_exception(ex)
+        tc.flush()
+
+    return json.dumps(list())

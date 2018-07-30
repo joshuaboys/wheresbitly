@@ -410,40 +410,6 @@
                                         ]
                                       },
                                       "actions": {
-                                        "Build_message_body_to_send_via_Service_Bus_Queue": {
-                                          "type": "Compose",
-                                          "inputs": {
-                                            "reqid": "@{variables('RequestIdentifier')}",
-                                            "finder": "@{triggerBody()?['UserDetails']?['UserName']}",
-                                            "bit": "@{variables('BitUserId')}",
-                                            "gamelevel": "@{body('Parse_JSON')?['activetier']}"
-                                          },
-                                          "runAfter": {}
-                                        },
-                                        "Send_winning_match_message": {
-                                          "type": "ApiConnection",
-                                          "inputs": {
-                                            "host": {
-                                              "connection": {
-                                                "name": "@parameters('$connections')['servicebus_1']['connectionId']"
-                                              }
-                                            },
-                                            "method": "post",
-                                            "body": {
-                                              "ContentData": "@{base64(outputs('Build_message_body_to_send_via_Service_Bus_Queue'))}",
-                                              "ContentType": "application/json"
-                                            },
-                                            "path": "/@{encodeURIComponent(encodeURIComponent('compwinners'))}/messages",
-                                            "queries": {
-                                              "systemProperties": "None"
-                                            }
-                                          },
-                                          "runAfter": {
-                                            "Build_message_body_to_send_via_Service_Bus_Queue": [
-                                              "Succeeded"
-                                            ]
-                                          }
-                                        },
                                         "Build_winner_log_message": {
                                           "type": "Compose",
                                           "inputs": {
@@ -452,14 +418,10 @@
                                             "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
                                             "postbody": "@{triggerBody()?['TweetText']}",
                                             "bit": "@{variables('BitUserId')}",
-                                            "gamelevel": "@{body('Parse_JSON')?['activetier']}",
+                                            "gamelevel": "@body('Parse_JSON')?['activetier']",
                                             "status": "matched_bitly"
                                           },
-                                          "runAfter": {
-                                            "Send_winning_match_message": [
-                                              "Succeeded"
-                                            ]
-                                          }
+                                          "runAfter": {}
                                         },
                                         "Write_matched_entry_log_to_DB": {
                                           "type": "ApiConnection",
@@ -495,6 +457,7 @@
                                               "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
                                               "postbody": "@{triggerBody()?['TweetText']}",
                                               "status": "no_face_match",
+                                              "gamelevel": "@body('Parse_JSON')?['activetier']",
                                               "confidencelevel": "@body('Find_person_from_face')?['confidence']"
                                             },
                                             "runAfter": {}
@@ -887,11 +850,6 @@
                 "connectionId": "[resourceId('Microsoft.Web/connections', parameters('faceapi_1_Connection_Name'))]",
                 "connectionName": "[parameters('faceapi_1_Connection_Name')]"
               },
-              "servicebus_1": {
-                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'servicebus')]",
-                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('servicebus_1_Connection_Name'))]",
-                "connectionName": "[parameters('servicebus_1_Connection_Name')]"
-              },
               "twitter_1": {
                 "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'twitter')]",
                 "connectionId": "[resourceId('Microsoft.Web/connections', parameters('twitter_1_Connection_Name'))]",
@@ -904,7 +862,6 @@
       "dependsOn": [
         "[resourceId('Microsoft.Web/connections', parameters('documentdb_1_Connection_Name'))]",
         "[resourceId('Microsoft.Web/connections', parameters('faceapi_1_Connection_Name'))]",
-        "[resourceId('Microsoft.Web/connections', parameters('servicebus_1_Connection_Name'))]",
         "[resourceId('Microsoft.Web/connections', parameters('twitter_1_Connection_Name'))]"
       ]
     },

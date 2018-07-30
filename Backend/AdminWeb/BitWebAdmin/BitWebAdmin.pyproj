@@ -53,8 +53,10 @@
     <Folder Include="BitWebAdmin\templates\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="BitWebAdmin\static\content\pl.gif" />
     <Content Include="BitWebAdmin\templates\findplayer.html" />
     <Content Include="BitWebAdmin\templates\eventadmin.html" />
+    <Content Include="BitWebAdmin\templates\winner.html" />
     <Content Include="BitWebAdmin\templates\gameadmin.html" />
     <Content Include="BitWebAdmin\templates\trainmodel.html" />
     <Content Include="requirements.txt" />

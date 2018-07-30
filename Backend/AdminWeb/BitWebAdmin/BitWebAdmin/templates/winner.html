@@ -1,0 +1,53 @@
+﻿{% extends "layout.html" %}
+{% block content %}
+<h2>View Winner</h2>
+<p>Click 'start' to begin listening for new winners - we'll check every 1 minute.</p>
+<form action="" method="post" name="gameadmin">
+    {{form.hidden_tag()}}
+    {{form.game_round.label}} {{form.game_round}}<br />
+    <p><button id="start" class="btn btn-primary btn-large">Start listening</button><a href="#" id="stop" class="btn btn-primary btn-large hidden">Stop listening</a> </p>
+</form>
+    <div id="waitingitem" class="hidden"><img src="static/content/pl.gif" height="32" width="32"/> Waiting for winners.</div>
+{% endblock %}
+{% block scripts %}
+<script language="JavaScript">
+
+    function checkStatus(gameRound) {
+            $.ajax({
+                url: '/winnerstatus?round=' + gameRound,
+                type: 'GET',
+                success: function (response) {
+
+                    console.log(response);
+
+                    var entries = jQuery.parseJSON(response);
+
+                    if (entries.length > 0) {
+                        console.log(entries[0].postedby);
+                    }
+
+                    if (entries.length <= 3) {
+                        console.log("re-run");
+                        setTimeout(function () {
+                            checkStatus($("#game_round").val());
+                        }, 10000);
+                    }  
+                },
+                error: function (error) {
+                    //$("#statustext").text("An unexpected error occurred.");
+                    //$("#statustext").removeClass("alert-dark");
+                    //$("#statustext").addClass("alert-error");
+                    console.log(error);
+                }
+            });
+        }
+
+    $("#start").click(function (event) {
+        event.preventDefault();
+        $("#start").toggle();
+        $("#waitingitem").toggle();
+        $("#stop").toggle();
+        checkStatus($("#game_round").val());
+    });
+</script>
+{% endblock %}
