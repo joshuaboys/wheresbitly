@@ -5,12 +5,14 @@
 <form action="" method="post" name="gameadmin">
     {{form.hidden_tag()}}
     {{form.game_round.label}} {{form.game_round}}<br />
-    <p><button id="start" class="btn btn-primary btn-large">Start listening</button><a href="#" id="stop" class="btn btn-primary btn-large hidden">Stop listening</a> </p>
+    <p><button id="start" class="btn btn-success btn-large">Start listening</button><a href="#" id="stop" class="btn btn-danger btn-large hidden">Stop listening</a> </p>
 </form>
     <div id="waitingitem" class="hidden"><img src="static/content/pl.gif" height="32" width="32"/> Waiting for winners.</div>
 {% endblock %}
 {% block scripts %}
 <script language="JavaScript">
+
+    var timer;
 
     function checkStatus(gameRound) {
             $.ajax({
@@ -28,9 +30,9 @@
 
                     if (entries.length <= 3) {
                         console.log("re-run");
-                        setTimeout(function () {
+                        timer = setTimeout(function () {
                             checkStatus($("#game_round").val());
-                        }, 10000);
+                        }, 60000);
                     }  
                 },
                 error: function (error) {
@@ -44,10 +46,18 @@
 
     $("#start").click(function (event) {
         event.preventDefault();
-        $("#start").toggle();
-        $("#waitingitem").toggle();
-        $("#stop").toggle();
+        $("#start").addClass("hidden");
+        $("#waitingitem").removeClass("hidden");
+        $("#stop").removeClass("hidden");
         checkStatus($("#game_round").val());
+    });
+
+    $("#stop").click(function (event) {
+        event.preventDefault();
+        $("#stop").addClass("hidden");
+        $("#waitingitem").addClass("hidden");
+        $("#start").removeClass("hidden");
+        clearTimeout(timer);
     });
 </script>
 {% endblock %}
