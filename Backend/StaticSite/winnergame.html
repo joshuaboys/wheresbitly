@@ -15,35 +15,37 @@
                 <h3 id="roundnumber"></h3>
                 <div class="row justify-content-md-center">
                     <div class="col">
-                        @Name<br/>
+                        <h4 id="bitname"></h4>
                         <img id="bitimg" src="http://via.placeholder.com/400x300" width="400" alt="Bitly!"/>
-
                     </div>
                     <div class="col">
-                        @Name<br/>
+                        <h4 id="winnername"></h4>
                         <img id="winner" src="http://via.placeholder.com/400x300" width="400" alt="Winner!"/>
                     </div>
                 </div>
                 <div class="form-group"></div>
                 <div class="row justify-content-md-center">
-                     <h4>Join in: https://aka.ms/HowToPlayFindBit</h4>
+                     <h3>Join in: https://aka.ms/HowToPlayFindBit</h3>
                 </div>
                 <hr />
                 <footer>
-                    <p>&copy; 2018 - Microsoft | <a href="activegame.html">A</a></p>
+                    <p>&copy; 2018 - Microsoft | <a href="activegame.html">_</a></p>
                 </footer>
             </div>
         
             <script>
-        (function() {
-        //   var gameAPI = "http://localhost:7071/api/ActiveGame";
-        //   $.getJSON(gameAPI)
-        //     .done(function( json ) {
-        //             $('#header').text("Where's Bitly? @ " + json.eventName);
-        //             $('#bitimg').attr('src', json.bitUrl);
-        //             $("#roundnumber").text("🦄🦄 Winner! for #Byte" + json.gameLevel);
-        //         });
-        })();
+(function() {
+  var gameAPI = "https://bitapidev.azurewebsites.net/api/winninggame?code=pgcp8l2V9ffdHTgmShQ/BRtcaYptKk1GjpmxLUQnSW5CAa8yr2cLvA== ";
+  $.getJSON(gameAPI)
+    .done(function( json ) {
+            $('#header').text("Where's Bitly? @ " + json.ActiveEvent);
+            $('#bitimg').attr('src', json.BitClearUrl);
+            $('#winner').attr('src', json.WinnerUrl);
+            $('#winnername').text("Winner: @" + json.CurrentWinner);
+            $('#bitname').text("Bit: @" + json.CurrentBit);
+            $("#roundnumber").text("Winner! #Byte" + json.ActiveTier);
+        });
+})();
         </script>
         </body>
         </html>
