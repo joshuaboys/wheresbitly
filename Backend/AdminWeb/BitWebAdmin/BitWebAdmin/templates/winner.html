@@ -16,45 +16,51 @@
 {% block scripts %}
 <script language="JavaScript">
 
+    var list = document.getElementById('winnerlist');
     var timer;
 
+    function populateList(item, index) {
+        var entry = document.createElement('li');
+        var newItem = item.postedby + " - " + item.postbody;
+        entry.appendChild(document.createTextNode(newItem));
+        list.appendChild(entry);
+    }
+
     function checkStatus(gameRound) {
-            $.ajax({
-                url: '/winnerstatus?round=' + gameRound,
-                type: 'GET',
-                success: function (response) {
+       
+        $(list).empty();
 
-                    console.log(response);
+        $.ajax({
+            url: '/winnerstatus?round=' + gameRound,
+            type: 'GET',
+            success: function (response) {
 
-                    var entries = jQuery.parseJSON(response);
+                var entries = jQuery.parseJSON(response);
 
-                    if (entries.length > 0) {
-                        console.log(entries[0].postedby);
-
-
-                        var list = document.getElementById('winnerlist');
-
-                        var entry = document.createElement('li');
-                        entry.appendChild(document.createTextNode(entries[0].postedby));
-                        list.appendChild(entry);
-
-                    }
-
-                    if (entries.length <= 3) {
-                        console.log("re-run");
-                        timer = setTimeout(function () {
-                            checkStatus($("#game_round").val());
-                        }, 60000);
-                    }  
-                },
-                error: function (error) {
-                    //$("#statustext").text("An unexpected error occurred.");
-                    //$("#statustext").removeClass("alert-dark");
-                    //$("#statustext").addClass("alert-error");
-                    console.log(error);
+                if (entries.length > 0) {
+                    $(list).empty();
+                    entries.forEach(populateList);
                 }
-            });
-        }
+
+                if (entries.length < 4) {
+                    timer = setTimeout(function () {
+                        checkStatus($("#game_round").val());
+                    }, 60000);
+                }
+                else {
+                    $("#stop").addClass("hidden");
+                    $("#waitingitem").addClass("hidden");
+                    $("#start").removeClass("hidden");
+                }
+            },
+            error: function (error) {
+                $("#stop").addClass("hidden");
+                $("#waitingitem").addClass("hidden");
+                $("#start").removeClass("hidden");
+                clearTimeout(timer);
+            }
+        });
+    }
 
     $("#start").click(function (event) {
         event.preventDefault();

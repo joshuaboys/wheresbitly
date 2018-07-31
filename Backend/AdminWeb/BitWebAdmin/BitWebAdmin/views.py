@@ -4,6 +4,7 @@ Routes and views for the flask application.
 
 import operator
 from PIL import Image, ImageDraw, ImageOps
+import socket
 import requests
 import uuid
 import adal
@@ -29,20 +30,17 @@ from BitWebAdmin import app
 from applicationinsights import TelemetryClient
 tc = TelemetryClient(app.config['APPINSIGHTS_INSTRUMENTATIONKEY'])
 
-PORT = 5213
-AUTHORITY_URL = aad_config.AUTHORITY_HOST_URL + '/' + aad_config.TENANT
-REDIRECT_URI = 'http://localhost:{}/setupsession'.format(PORT)
-TEMPLATE_AUTHZ_URL = ('https://login.microsoftonline.com/{}/oauth2/authorize?' +
-                      'response_type=code&client_id={}&redirect_uri={}&' +
-                      'state={}&resource={}')
 @app.route("/login")
 def login():
+
+    redirect_uri = 'http://{}/setupsession'.format(request.host)
+
     auth_state = str(uuid.uuid4())
     session['state'] = auth_state
-    authorization_url = TEMPLATE_AUTHZ_URL.format(
+    authorization_url = aad_config.TEMPLATE_AUTHZ_URL.format(
         aad_config.TENANT,
         aad_config.CLIENT_ID,
-        REDIRECT_URI,
+        redirect_uri,
         auth_state,
         aad_config.RESOURCE)
 
@@ -57,9 +55,11 @@ def setupsession():
     if state != session['state']:
         raise ValueError("State does not match")
 
+    redirect_uri = 'http://{}/setupsession'.format(request.host)
+
     # now request tokens
     auth_context = adal.AuthenticationContext(AUTHORITY_URL)
-    token_response = auth_context.acquire_token_with_authorization_code(code, REDIRECT_URI, aad_config.RESOURCE, aad_config.CLIENT_ID, aad_config.CLIENT_SECRET)
+    token_response = auth_context.acquire_token_with_authorization_code(code, redirect_uri, aad_config.RESOURCE, aad_config.CLIENT_ID, aad_config.CLIENT_SECRET)
 
     # It is recommended to save this to a database when using a production app.
     session['access_token'] = token_response['accessToken']
