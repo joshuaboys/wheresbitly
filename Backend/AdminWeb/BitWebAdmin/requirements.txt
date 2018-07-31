@@ -15,3 +15,4 @@ pydocumentdb>=1.0.0
 cognitive_face
 applicationinsights
 azure-storage
+adal

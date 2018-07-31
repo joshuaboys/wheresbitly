@@ -18,6 +18,7 @@
     <Name>BitWebAdmin</Name>
     <RootNamespace>BitWebAdmin</RootNamespace>
     <InterpreterId>Global|PythonCore|2.7</InterpreterId>
+    <WebBrowserPort>5213</WebBrowserPort>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -28,6 +29,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="aad_config.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="config_cosmos.py">
       <SubType>Code</SubType>
     </Compile>

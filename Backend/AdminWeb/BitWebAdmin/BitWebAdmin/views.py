@@ -5,6 +5,8 @@ Routes and views for the flask application.
 import operator
 from PIL import Image, ImageDraw, ImageOps
 import requests
+import uuid
+import adal
 import io
 from io import BytesIO
 import random
@@ -15,29 +17,62 @@ from forms import GameAdminForm, ConfirmUserForm, FindUserForm, EventAdminForm
 from flask_wtf import Form
 from wtforms.fields import StringField, BooleanField, SelectField
 from wtforms.validators import InputRequired
-import config_cosmos
+import config_cosmos, aad_config
 import pydocumentdb
 import pydocumentdb.document_client as document_client
 import pydocumentdb.errors as errors
 from azure.storage.blob import BlockBlobService, ContentSettings
 from datetime import datetime
-from flask import render_template, request, json
-from flask_basicauth import BasicAuth
+from flask import render_template, request, json, session, redirect, url_for
 from BitWebAdmin import app
 
 from applicationinsights import TelemetryClient
 tc = TelemetryClient(app.config['APPINSIGHTS_INSTRUMENTATIONKEY'])
 
-#app.config['BASIC_AUTH_USERNAME'] = 'wherebit'
-#app.config['BASIC_AUTH_PASSWORD'] = 'simon'
-#app.config['BASIC_AUTH_FORCE'] = True
+PORT = 5213
+AUTHORITY_URL = aad_config.AUTHORITY_HOST_URL + '/' + aad_config.TENANT
+REDIRECT_URI = 'http://localhost:{}/setupsession'.format(PORT)
+TEMPLATE_AUTHZ_URL = ('https://login.microsoftonline.com/{}/oauth2/authorize?' +
+                      'response_type=code&client_id={}&redirect_uri={}&' +
+                      'state={}&resource={}')
+@app.route("/login")
+def login():
+    auth_state = str(uuid.uuid4())
+    session['state'] = auth_state
+    authorization_url = TEMPLATE_AUTHZ_URL.format(
+        aad_config.TENANT,
+        aad_config.CLIENT_ID,
+        REDIRECT_URI,
+        auth_state,
+        aad_config.RESOURCE)
 
-#basic_auth = BasicAuth(app)
+    return redirect(authorization_url, code = 307)
+
+@app.route("/setupsession")
+def setupsession():
+
+    # extract returned values from URL
+    code = request.args['code']
+    state = request.args['state']
+    if state != session['state']:
+        raise ValueError("State does not match")
+
+    # now request tokens
+    auth_context = adal.AuthenticationContext(AUTHORITY_URL)
+    token_response = auth_context.acquire_token_with_authorization_code(code, REDIRECT_URI, aad_config.RESOURCE, aad_config.CLIENT_ID, aad_config.CLIENT_SECRET)
+
+    # It is recommended to save this to a database when using a production app.
+    session['access_token'] = token_response['accessToken']
+
+    return redirect(url_for('home'))
 
 @app.route('/')
 @app.route('/home')
 def home():
-    """Renders the home page."""
+
+    if 'access_token' not in session:
+        return redirect(url_for('login'))
+
     return render_template(
         'index.html',
         title='Home Page',
@@ -46,6 +81,9 @@ def home():
 
 @app.route('/findplayer')
 def findplayer():
+
+    if 'access_token' not in session:
+        return redirect(url_for('login'))
 
     form = FindUserForm()
 
@@ -58,6 +96,9 @@ def findplayer():
 
 @app.route('/confirmplayer', methods=['POST'])
 def confirmplayer():
+
+    if 'access_token' not in session:
+        return redirect(url_for('login'))
    
     form = ConfirmUserForm() 
     form.user_name = request.form['user_name']
@@ -141,6 +182,9 @@ def confirmplayer():
 @app.route('/trainmodel', methods=['GET'])
 def trainmodel(): 
 
+    if 'access_token' not in session:
+        return redirect(url_for('login'))
+
     CF.Key.set(face_config.FACE_KEY)
     CF.BaseUrl.set(face_config.FACE_HOST)
 
@@ -193,6 +237,10 @@ def confirmrego():
 
 @app.route('/eventadmin', methods=['GET', 'POST'])
 def eventadmin(): 
+
+    if 'access_token' not in session:
+        return redirect(url_for('login'))
+
     form = EventAdminForm()
     saved_status = ""
 
@@ -225,6 +273,10 @@ def eventadmin():
 
 @app.route('/gameadmin', methods=['GET', 'POST'])
 def gameadmin(): 
+
+    if 'access_token' not in session:
+        return redirect(url_for('login'))
+
     form = GameAdminForm()    
     form.game_round.choices = [(0,'None'),(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6')]
     
@@ -367,6 +419,10 @@ def gameadmin():
 
 @app.route('/winner', methods=['GET'])
 def winner():
+
+    if 'access_token' not in session:
+        return redirect(url_for('login'))
+
     form = GameAdminForm()    
     form.game_round.choices = [(0,'None'),(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6')]
     

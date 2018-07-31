@@ -8,6 +8,10 @@
     <p><button id="start" class="btn btn-success btn-large">Start listening</button><a href="#" id="stop" class="btn btn-danger btn-large hidden">Stop listening</a> </p>
 </form>
     <div id="waitingitem" class="hidden"><img src="static/content/pl.gif" height="32" width="32"/> Waiting for winners.</div>
+
+<ol id="winnerlist">
+    
+</ol>
 {% endblock %}
 {% block scripts %}
 <script language="JavaScript">
@@ -26,6 +30,14 @@
 
                     if (entries.length > 0) {
                         console.log(entries[0].postedby);
+
+
+                        var list = document.getElementById('winnerlist');
+
+                        var entry = document.createElement('li');
+                        entry.appendChild(document.createTextNode(entries[0].postedby));
+                        list.appendChild(entry);
+
                     }
 
                     if (entries.length <= 3) {
