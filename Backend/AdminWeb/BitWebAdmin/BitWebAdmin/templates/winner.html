@@ -9,9 +9,7 @@
 </form>
     <div id="waitingitem" class="hidden"><img src="static/content/pl.gif" height="32" width="32"/> Waiting for winners.</div>
 
-<ol id="winnerlist">
-    
-</ol>
+<ol id="winnerlist"></ol>
 {% endblock %}
 {% block scripts %}
 <script language="JavaScript">
@@ -42,7 +40,7 @@
                     entries.forEach(populateList);
                 }
 
-                if (entries.length < 4) {
+                if (entries.length < 1) {
                     timer = setTimeout(function () {
                         checkStatus($("#game_round").val());
                     }, 60000);

@@ -363,6 +363,7 @@ def gameadmin():
                  # Set the new game level and write game configuration to Cosmos
                 gameConfigDoc['activetier'] = int(form.game_round.data)
                 gameConfigDoc['bitimgurl'] = bitly_blob_url
+                gameConfigDoc['bitclearurl'] = playerImageUrl
                 gameConfigDoc['currentbit'] = bitly_user_handle
 
                 client.ReplaceDocument(gameConfigDoc['_self'], gameConfigDoc)
@@ -462,7 +463,7 @@ def winnerstatus():
 
             # load old winner details from Cosmos
             query = {
-                        "query": "SELECT TOP 3 * FROM e WHERE e.status='matched_bitly' AND e.gamelevel=@gameLevel",
+                        "query": "  ",
                         "parameters" : [
                                 { "name": "@gameLevel", "value": game_round }
                             ]
