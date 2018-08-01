@@ -57,6 +57,7 @@
     <Folder Include="BitWebAdmin\templates\" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="bitwebadmin - Web Deploy.pubxml" />
     <Content Include="BitWebAdmin\static\content\pl.gif" />
     <Content Include="BitWebAdmin\templates\findplayer.html" />
     <Content Include="BitWebAdmin\templates\eventadmin.html" />

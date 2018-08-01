@@ -491,3 +491,19 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+/Backend/AdminWeb/BitWebAdmin/azure_storage-0.36.0-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/azure_nspkg-2.0.0-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/azure_common-1.1.14-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/asn1crypto-0.24.0-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/urllib3-1.23-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/six-1.11.0-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/requests-2.19.1-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/python_dateutil-2.7.3-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/pycparser-2.18-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/ipaddress-1.0.22-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/idna-2.7-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/enum34-1.1.6-py2-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/cryptography-2.3-cp27-cp27m-win_amd64.whl
+/Backend/AdminWeb/BitWebAdmin/chardet-3.0.4-py2.py3-none-any.whl
+/Backend/AdminWeb/BitWebAdmin/cffi-1.11.5-cp27-cp27m-win_amd64.whl
+/Backend/AdminWeb/BitWebAdmin/certifi-2018.4.16-py2.py3-none-any.whl

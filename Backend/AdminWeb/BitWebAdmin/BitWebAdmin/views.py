@@ -33,7 +33,7 @@ tc = TelemetryClient(app.config['APPINSIGHTS_INSTRUMENTATIONKEY'])
 @app.route("/login")
 def login():
 
-    redirect_uri = 'http://{}/setupsession'.format(request.host)
+    redirect_uri = '{}://{}/setupsession'.format(request.scheme, request.host)
 
     auth_state = str(uuid.uuid4())
     session['state'] = auth_state
@@ -55,10 +55,10 @@ def setupsession():
     if state != session['state']:
         raise ValueError("State does not match")
 
-    redirect_uri = 'http://{}/setupsession'.format(request.host)
+    redirect_uri = '{}://{}/setupsession'.format(request.scheme, request.host)
 
     # now request tokens
-    auth_context = adal.AuthenticationContext(AUTHORITY_URL)
+    auth_context = adal.AuthenticationContext(aad_config.AUTHORITY_URL)
     token_response = auth_context.acquire_token_with_authorization_code(code, redirect_uri, aad_config.RESOURCE, aad_config.CLIENT_ID, aad_config.CLIENT_SECRET)
 
     # It is recommended to save this to a database when using a production app.
@@ -463,7 +463,7 @@ def winnerstatus():
 
             # load old winner details from Cosmos
             query = {
-                        "query": "  ",
+                        "query": "SELECT TOP 1 * FROM e WHERE e.status='matched_bitly' AND e.gamelevel=@gameLevel",
                         "parameters" : [
                                 { "name": "@gameLevel", "value": game_round }
                             ]
