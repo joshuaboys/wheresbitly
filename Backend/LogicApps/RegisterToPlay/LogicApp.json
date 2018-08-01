@@ -73,27 +73,6 @@
       "type": "string",
       "defaultValue": "BitWhere"
     },
-    "azureblob_1_Connection_Name": {
-      "type": "string",
-      "defaultValue": "azureblob"
-    },
-    "azureblob_1_Connection_DisplayName": {
-      "type": "string",
-      "defaultValue": "BitStorage"
-    },
-    "azureblob_1_accountName": {
-      "type": "string",
-      "metadata": {
-        "description": "Name of the storage account the connector should use."
-      },
-      "defaultValue": "whereisbitdev01"
-    },
-    "azureblob_1_accessKey": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Specify a valid primary/secondary storage account access key."
-      }
-    },
     "documentdb_1_Connection_Name": {
       "type": "string",
       "defaultValue": "documentdb"
@@ -725,22 +704,6 @@
           "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'twitter')]"
         },
         "displayName": "[parameters('twitter_1_Connection_DisplayName')]"
-      }
-    },
-    {
-      "type": "MICROSOFT.WEB/CONNECTIONS",
-      "apiVersion": "2016-06-01",
-      "name": "[parameters('azureblob_1_Connection_Name')]",
-      "location": "[parameters('logicAppLocation')]",
-      "properties": {
-        "api": {
-          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'azureblob')]"
-        },
-        "displayName": "[parameters('azureblob_1_Connection_DisplayName')]",
-        "parameterValues": {
-          "accountName": "[parameters('azureblob_1_accountName')]",
-          "accessKey": "[parameters('azureblob_1_accessKey')]"
-        }
       }
     },
     {

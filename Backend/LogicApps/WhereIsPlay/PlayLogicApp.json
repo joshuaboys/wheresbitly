@@ -73,27 +73,6 @@
         "description": "Primary or Secondary Key"
       }
     },
-    "azureblob_1_Connection_Name": {
-      "type": "string",
-      "defaultValue": "azureblob"
-    },
-    "azureblob_1_Connection_DisplayName": {
-      "type": "string",
-      "defaultValue": "BitStorage"
-    },
-    "azureblob_1_accountName": {
-      "type": "string",
-      "metadata": {
-        "description": "Name of the storage account the connector should use."
-      },
-      "defaultValue": "whereisbitdev01"
-    },
-    "azureblob_1_accessKey": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Specify a valid primary/secondary storage account access key."
-      }
-    },
     "faceapi_1_Connection_Name": {
       "type": "string",
       "defaultValue": "faceapi"
@@ -114,20 +93,6 @@
         "description": "Root site url (Example: https://westus.api.cognitive.microsoft.com ).If not specified site url will be defaulted to 'https://westus.api.cognitive.microsoft.com'."
       },
       "defaultValue": "https://westus2.api.cognitive.microsoft.com/face/v1.0"
-    },
-    "servicebus_1_Connection_Name": {
-      "type": "string",
-      "defaultValue": "servicebus-1"
-    },
-    "servicebus_1_Connection_DisplayName": {
-      "type": "string",
-      "defaultValue": "bitservicebus"
-    },
-    "servicebus_1_connectionString": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Azure Service Bus Connection String"
-      }
     }
   },
   "variables": {},
@@ -896,22 +861,6 @@
     {
       "type": "MICROSOFT.WEB/CONNECTIONS",
       "apiVersion": "2016-06-01",
-      "name": "[parameters('azureblob_1_Connection_Name')]",
-      "location": "[parameters('logicAppLocation')]",
-      "properties": {
-        "api": {
-          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'azureblob')]"
-        },
-        "displayName": "[parameters('azureblob_1_Connection_DisplayName')]",
-        "parameterValues": {
-          "accountName": "[parameters('azureblob_1_accountName')]",
-          "accessKey": "[parameters('azureblob_1_accessKey')]"
-        }
-      }
-    },
-    {
-      "type": "MICROSOFT.WEB/CONNECTIONS",
-      "apiVersion": "2016-06-01",
       "name": "[parameters('faceapi_1_Connection_Name')]",
       "location": "[parameters('logicAppLocation')]",
       "properties": {
@@ -922,21 +871,6 @@
         "parameterValues": {
           "apiKey": "[parameters('faceapi_1_apiKey')]",
           "siteUrl": "[parameters('faceapi_1_siteUrl')]"
-        }
-      }
-    },
-    {
-      "type": "MICROSOFT.WEB/CONNECTIONS",
-      "apiVersion": "2016-06-01",
-      "name": "[parameters('servicebus_1_Connection_Name')]",
-      "location": "[parameters('logicAppLocation')]",
-      "properties": {
-        "api": {
-          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'servicebus')]"
-        },
-        "displayName": "[parameters('servicebus_1_Connection_DisplayName')]",
-        "parameterValues": {
-          "connectionString": "[parameters('servicebus_1_connectionString')]"
         }
       }
     }
