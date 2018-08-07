@@ -237,85 +237,105 @@
                             ]
                           }
                         },
-                        "Check_if_entry_is_for_the_current_active_level_of_the_game": {
-                          "type": "If",
-                          "expression": {
-                            "and": [
-                              {
-                                "contains": [
-                                  "@triggerBody()?['TweetText']",
-                                  "@concat('#Byte', string(body('Parse_JSON')?['activetier']))"
-                                ]
+                        "Load_person_'name'_for_the_user_selected_as_Bit": {
+                          "type": "ApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connection": {
+                                "name": "@parameters('$connections')['documentdb']['connectionId']"
                               }
-                            ]
+                            },
+                            "method": "post",
+                            "body": {
+                              "query": "select * from c where c.byteround = @{body('Parse_JSON')?['activetier']}"
+                            },
+                            "headers": {
+                              "x-ms-max-item-count": 1
+                            },
+                            "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('registeredusers')}/query"
                           },
+                          "runAfter": {
+                            "Parse_JSON": [
+                              "Succeeded"
+                            ]
+                          }
+                        },
+                        "For_each_2": {
+                          "type": "Foreach",
+                          "foreach": "@body('Load_person_''name''_for_the_user_selected_as_Bit')?['Documents']",
                           "actions": {
-                            "Load_person_'name'_for_the_user_selected_as_Bit": {
+                            "Parse_JSON_2": {
+                              "type": "ParseJson",
+                              "inputs": {
+                                "content": "@items('For_each_2')",
+                                "schema": {
+                                  "type": "object",
+                                  "properties": {
+                                    "personid": {
+                                      "type": "string"
+                                    },
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "confirmed": {
+                                      "type": "boolean"
+                                    },
+                                    "byteround": {
+                                      "type": "integer"
+                                    },
+                                    "reqid": {
+                                      "type": "string"
+                                    },
+                                    "_rid": {
+                                      "type": "string"
+                                    },
+                                    "_self": {
+                                      "type": "string"
+                                    },
+                                    "_etag": {
+                                      "type": "string"
+                                    },
+                                    "_attachments": {
+                                      "type": "string"
+                                    },
+                                    "_ts": {
+                                      "type": "integer"
+                                    }
+                                  }
+                                }
+                              },
+                              "runAfter": {}
+                            },
+                            "Detect_faces": {
                               "type": "ApiConnection",
                               "inputs": {
                                 "host": {
                                   "connection": {
-                                    "name": "@parameters('$connections')['documentdb']['connectionId']"
+                                    "name": "@parameters('$connections')['faceapi']['connectionId']"
                                   }
                                 },
                                 "method": "post",
                                 "body": {
-                                  "query": "select * from c where c.byteround = @{body('Parse_JSON')?['activetier']}"
+                                  "url": "@variables('TweetMediaURL')"
                                 },
-                                "headers": {
-                                  "x-ms-max-item-count": 1
-                                },
-                                "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('registeredusers')}/query"
+                                "path": "/face/v1.0/detect",
+                                "queries": {
+                                  "returnFaceId": "true",
+                                  "returnFaceAttributes": "age,gender,headPose,smile,facialHair,glasses",
+                                  "returnFaceLandmarks": "true"
+                                }
                               },
-                              "runAfter": {}
+                              "runAfter": {
+                                "Set_variable": [
+                                  "Succeeded"
+                                ]
+                              }
                             },
-                            "For_each_2": {
+                            "For_each": {
                               "type": "Foreach",
-                              "foreach": "@body('Load_person_''name''_for_the_user_selected_as_Bit')?['Documents']",
+                              "foreach": "@body('Detect_faces')",
                               "actions": {
-                                "Parse_JSON_2": {
-                                  "type": "ParseJson",
-                                  "inputs": {
-                                    "content": "@items('For_each_2')",
-                                    "schema": {
-                                      "type": "object",
-                                      "properties": {
-                                        "personid": {
-                                          "type": "string"
-                                        },
-                                        "id": {
-                                          "type": "string"
-                                        },
-                                        "confirmed": {
-                                          "type": "boolean"
-                                        },
-                                        "byteround": {
-                                          "type": "integer"
-                                        },
-                                        "reqid": {
-                                          "type": "string"
-                                        },
-                                        "_rid": {
-                                          "type": "string"
-                                        },
-                                        "_self": {
-                                          "type": "string"
-                                        },
-                                        "_etag": {
-                                          "type": "string"
-                                        },
-                                        "_attachments": {
-                                          "type": "string"
-                                        },
-                                        "_ts": {
-                                          "type": "integer"
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "runAfter": {}
-                                },
-                                "Detect_faces": {
+                                "Find_person_from_face": {
                                   "type": "ApiConnection",
                                   "inputs": {
                                     "host": {
@@ -325,196 +345,128 @@
                                     },
                                     "method": "post",
                                     "body": {
-                                      "url": "@variables('TweetMediaURL')"
+                                      "faceId": "@items('For_each')?['faceId']",
+                                      "personGroupId": "@body('Parse_JSON')?['persongroupid']",
+                                      "personId": "@body('Parse_JSON_2')?['personid']"
                                     },
-                                    "path": "/face/v1.0/detect",
-                                    "queries": {
-                                      "returnFaceId": "true",
-                                      "returnFaceAttributes": "age,gender,headPose,smile,facialHair,glasses",
-                                      "returnFaceLandmarks": "true"
-                                    }
+                                    "path": "/face/v1.0/verify"
                                   },
-                                  "runAfter": {
-                                    "Set_variable": [
-                                      "Succeeded"
-                                    ]
-                                  }
+                                  "runAfter": {}
                                 },
-                                "For_each": {
-                                  "type": "Foreach",
-                                  "foreach": "@body('Detect_faces')",
+                                "Condition": {
+                                  "type": "If",
+                                  "expression": {
+                                    "and": [
+                                      {
+                                        "equals": [
+                                          "@body('Find_person_from_face')?['isIdentical']",
+                                          "@true"
+                                        ]
+                                      }
+                                    ]
+                                  },
                                   "actions": {
-                                    "Find_person_from_face": {
+                                    "Build_winner_log_message": {
+                                      "type": "Compose",
+                                      "inputs": {
+                                        "id": "@{guid()}",
+                                        "reqid": "@{variables('RequestIdentifier')}",
+                                        "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
+                                        "postbody": "@{triggerBody()?['TweetText']}",
+                                        "bit": "@{variables('BitUserId')}",
+                                        "gamelevel": "@body('Parse_JSON')?['activetier']",
+                                        "status": "matched_bitly"
+                                      },
+                                      "runAfter": {}
+                                    },
+                                    "Write_matched_entry_log_to_DB": {
                                       "type": "ApiConnection",
                                       "inputs": {
                                         "host": {
                                           "connection": {
-                                            "name": "@parameters('$connections')['faceapi']['connectionId']"
+                                            "name": "@parameters('$connections')['documentdb']['connectionId']"
                                           }
                                         },
                                         "method": "post",
-                                        "body": {
-                                          "faceId": "@items('For_each')?['faceId']",
-                                          "personGroupId": "@body('Parse_JSON')?['persongroupid']",
-                                          "personId": "@body('Parse_JSON_2')?['personid']"
-                                        },
-                                        "path": "/face/v1.0/verify"
-                                      },
-                                      "runAfter": {}
-                                    },
-                                    "Condition": {
-                                      "type": "If",
-                                      "expression": {
-                                        "and": [
-                                          {
-                                            "equals": [
-                                              "@body('Find_person_from_face')?['isIdentical']",
-                                              "@true"
-                                            ]
-                                          }
-                                        ]
-                                      },
-                                      "actions": {
-                                        "Build_winner_log_message": {
-                                          "type": "Compose",
-                                          "inputs": {
-                                            "id": "@{guid()}",
-                                            "reqid": "@{variables('RequestIdentifier')}",
-                                            "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
-                                            "postbody": "@{triggerBody()?['TweetText']}",
-                                            "bit": "@{variables('BitUserId')}",
-                                            "gamelevel": "@body('Parse_JSON')?['activetier']",
-                                            "status": "matched_bitly"
-                                          },
-                                          "runAfter": {}
-                                        },
-                                        "Write_matched_entry_log_to_DB": {
-                                          "type": "ApiConnection",
-                                          "inputs": {
-                                            "host": {
-                                              "connection": {
-                                                "name": "@parameters('$connections')['documentdb']['connectionId']"
-                                              }
-                                            },
-                                            "method": "post",
-                                            "body": "@outputs('Build_winner_log_message')",
-                                            "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
-                                          },
-                                          "runAfter": {
-                                            "Build_winner_log_message": [
-                                              "Succeeded"
-                                            ]
-                                          }
-                                        }
+                                        "body": "@outputs('Build_winner_log_message')",
+                                        "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
                                       },
                                       "runAfter": {
-                                        "Find_person_from_face": [
+                                        "Build_winner_log_message": [
                                           "Succeeded"
                                         ]
-                                      },
-                                      "else": {
-                                        "actions": {
-                                          "Build_log_message_for_no_match": {
-                                            "type": "Compose",
-                                            "inputs": {
-                                              "id": "@{guid()}",
-                                              "reqid": "@{variables('RequestIdentifier')}",
-                                              "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
-                                              "postbody": "@{triggerBody()?['TweetText']}",
-                                              "status": "no_face_match",
-                                              "gamelevel": "@body('Parse_JSON')?['activetier']",
-                                              "confidencelevel": "@body('Find_person_from_face')?['confidence']"
-                                            },
-                                            "runAfter": {}
-                                          },
-                                          "Write_no_match_log_message_to_DB": {
-                                            "type": "ApiConnection",
-                                            "inputs": {
-                                              "host": {
-                                                "connection": {
-                                                  "name": "@parameters('$connections')['documentdb']['connectionId']"
-                                                }
-                                              },
-                                              "method": "post",
-                                              "body": "@outputs('Build_log_message_for_no_match')",
-                                              "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
-                                            },
-                                            "runAfter": {
-                                              "Build_log_message_for_no_match": [
-                                                "Succeeded"
-                                              ]
-                                            }
-                                          }
-                                        }
-                                      },
-                                      "description": "Is Identitical set to 'true' if confidence level is greater than 50%"
+                                      }
                                     }
                                   },
                                   "runAfter": {
-                                    "Detect_faces": [
+                                    "Find_person_from_face": [
                                       "Succeeded"
                                     ]
                                   },
-                                  "description": "There may be multiple faces in the provided image so we need to process each of them."
-                                },
-                                "Set_variable": {
-                                  "type": "SetVariable",
-                                  "inputs": {
-                                    "name": "BitUserId",
-                                    "value": "@body('Parse_JSON_2')?['id']"
+                                  "else": {
+                                    "actions": {
+                                      "Build_log_message_for_no_match": {
+                                        "type": "Compose",
+                                        "inputs": {
+                                          "id": "@{guid()}",
+                                          "reqid": "@{variables('RequestIdentifier')}",
+                                          "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
+                                          "postbody": "@{triggerBody()?['TweetText']}",
+                                          "status": "no_face_match",
+                                          "gamelevel": "@body('Parse_JSON')?['activetier']",
+                                          "confidencelevel": "@body('Find_person_from_face')?['confidence']"
+                                        },
+                                        "runAfter": {}
+                                      },
+                                      "Write_no_match_log_message_to_DB": {
+                                        "type": "ApiConnection",
+                                        "inputs": {
+                                          "host": {
+                                            "connection": {
+                                              "name": "@parameters('$connections')['documentdb']['connectionId']"
+                                            }
+                                          },
+                                          "method": "post",
+                                          "body": "@outputs('Build_log_message_for_no_match')",
+                                          "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
+                                        },
+                                        "runAfter": {
+                                          "Build_log_message_for_no_match": [
+                                            "Succeeded"
+                                          ]
+                                        }
+                                      }
+                                    }
                                   },
-                                  "runAfter": {
-                                    "Parse_JSON_2": [
-                                      "Succeeded"
-                                    ]
-                                  }
+                                  "description": "Is Identitical set to 'true' if confidence level is greater than 50%"
                                 }
                               },
                               "runAfter": {
-                                "Load_person_'name'_for_the_user_selected_as_Bit": [
+                                "Detect_faces": [
                                   "Succeeded"
                                 ]
                               },
-                              "description": "Will only run once as we have limited match responses to 1 in previous action."
+                              "description": "There may be multiple faces in the provided image so we need to process each of them."
+                            },
+                            "Set_variable": {
+                              "type": "SetVariable",
+                              "inputs": {
+                                "name": "BitUserId",
+                                "value": "@body('Parse_JSON_2')?['id']"
+                              },
+                              "runAfter": {
+                                "Parse_JSON_2": [
+                                  "Succeeded"
+                                ]
+                              }
                             }
                           },
                           "runAfter": {
-                            "Parse_JSON": [
+                            "Load_person_'name'_for_the_user_selected_as_Bit": [
                               "Succeeded"
                             ]
                           },
-                          "else": {
-                            "actions": {
-                              "Create_log_message_for_incorrect_game_level_entry": {
-                                "type": "Compose",
-                                "inputs": {
-                                  "id": "@{guid()}",
-                                  "reqid": "@{variables('RequestIdentifier')}",
-                                  "postedby": "@{triggerBody()?['UserDetails']?['UserName']}",
-                                  "status": "incorrect_game_level"
-                                },
-                                "runAfter": {}
-                              },
-                              "Create_or_update_document": {
-                                "type": "ApiConnection",
-                                "inputs": {
-                                  "host": {
-                                    "connection": {
-                                      "name": "@parameters('$connections')['documentdb']['connectionId']"
-                                    }
-                                  },
-                                  "method": "post",
-                                  "body": "@outputs('Create_log_message_for_incorrect_game_level_entry')",
-                                  "path": "/dbs/@{encodeURIComponent('bitcore')}/colls/@{encodeURIComponent('playattempts')}/docs"
-                                },
-                                "runAfter": {
-                                  "Create_log_message_for_incorrect_game_level_entry": [
-                                    "Succeeded"
-                                  ]
-                                }
-                              }
-                            }
-                          }
+                          "description": "Will only run once as we have limited match responses to 1 in previous action."
                         }
                       },
                       "runAfter": {
